@@ -161,7 +161,8 @@ public:
 
 int main(void) {
     // create a test tree for \x -> (\y -> x y)
-    Term *t = new Abs("x", new Abs("y", new App(new Var("x"), new Var("y)"))));
+    auto t = std::shared_ptr<Term>
+        (new Abs("x", new Abs("y", new App(new Var("x"), new Var("y)")))));
     std::shared_ptr<Term> c1 = t->clone();
     std::shared_ptr<Term> c2 = t->clone();
 

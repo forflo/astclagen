@@ -220,6 +220,66 @@ def unifyNames(name):
     else:
         return [name]
 
+def getAllLeafClasses(patterns):
+    edges = []
+    nodes = []
+    # add all edges
+    for c, e in patterns.items():
+        nodes.append(c)
+        edges.append((e["parent"], c))
+    leafs = []
+    for n in nodes:
+        contained = False
+        for tup in edges:
+            if n == tup[0]:
+                contained = True
+                break;
+        if not contained:
+            leafs.append(n)
+    return leafs
+
+def printAbstractAstVisitor(patterns):
+    visits = []
+    leafs = getAllLeafClasses(patterns)
+    for l in leafs:
+        visits.append("virtual R visit(" + l + " v, P p) = 0;")
+    visits = "\n".join(visits)
+    print("""
+    template<typename P, typename R> struct AstVisitor {
+    public:
+    %(visits)s
+    virtual R visitNull(P parameter) = 0;
+    };
+    """ % locals())
+
+def printTraverseTemplate(classes):
+    patterns = []
+    leafs = getAllLeafClasses(classes)
+    for l in leafs:
+        patterns.append("""some<%(l)s>(), [&](%(l)s &n){
+        return v->visit(n, initial);}""" % locals())
+    patterns = ",\n".join(patterns)
+    print("""
+    template<typename P, typename R>
+    R traverse(AstVisitor<P, R> *v,
+    const std::shared_ptr<Term> &t,
+    P &initial) {
+    using namespace simple_match;
+    using namespace simple_match::placeholders;
+    return match(t,
+    %(patterns)s
+    none(),      [&]()      { return v->visitNull(initial); });
+    }
+    """ % locals())
+
+def printTraverseTemplateDecl():
+    print("""
+    template<typename P, typename R>
+    R traverse(AstVisitor<P, R>,
+    const std::shared_ptr<Term> &,
+    P &);
+    """)
+
 def printSimpleMatchAdapter():
     print("namespace simple_match {")
     print("namespace customization {")
@@ -253,8 +313,10 @@ def makeSharedWrapper(string, flag):
     else:
         return string
 
-def printCtor(className, classEntry):
+def printCtor(superClass, className, classEntry, shared):
     print("// CTOR")
+    const = "" if not shared else "const"
+    alias = " &" if shared else " *"
     if len(classEntry["members"]) == 0:
         print(className + "(){}")
         return
@@ -262,14 +324,16 @@ def printCtor(className, classEntry):
     for member in classEntry["members"]:
         typ = member["cppType"]
         name = member["name"]
-        st = canProduceSubTree(typ)
+        st = canProduceSubTree(typ) and shared
         if type(name) is list:
             toJoin = []
             for i in name:
-                toJoin.append("const " + makeSharedWrapper(typ, st) + " &" + i)
+                toJoin.append(const + " " + makeSharedWrapper(typ, st)
+                              + alias + i)
             decls.append(", ".join(toJoin))
         else:
-            decls.append("const " + makeSharedWrapper(typ, st) + " &" + name)
+            decls.append(const + " " + makeSharedWrapper(typ, st)
+                         + alias + name)
 
     print(className + "(" + ", ".join(decls) + ") : ")
     # init list
@@ -279,11 +343,19 @@ def printCtor(className, classEntry):
         name = member["name"]
         if type(name) is list:
             for i in name:
-                toJoin.append(i + "(" + i + ")")
+                toJoin.append(i + "("
+                              + wrapIntoShared(i, superClass, not shared) + ")")
         else:
-            toJoin.append(name + "(" + name + ")")
+            toJoin.append(name + "("
+                          + wrapIntoShared(name, superClass, not shared)+ ")")
     print(", ".join(toJoin))
     print("{}")
+
+def wrapIntoShared(name, superClass, flag):
+    if flag:
+        return "std::shared_ptr<%(superClass)s>(%(name)s)" % locals()
+    else:
+        return name
 
 def printHeader():
     print("#include <memory>")
@@ -336,6 +408,14 @@ def printCloneImpl(className, superClass):
     }
     """ % locals())
 
+def needsConvenientCtor(className, classEntry):
+    containsSubTree = False
+    for member in classEntry["members"]:
+        typ = member["cppType"]
+        treeable = canProduceSubTree(typ)
+        containsSubTree = containsSubTree or treeable
+    return containsSubTree
+
 def printClassDef():
     for key, value in patterns.items():
         isTop = value["parent"] == None
@@ -358,7 +438,11 @@ def printClassDef():
             else:
                 decl = decl + name + ";"
             print(decl)
-        printCtor(key, value)
+        # emit ctors
+        printCtor(superClass, key, value, True)
+        if needsConvenientCtor(key, value):
+            printCtor(superClass, key, value, False)
+        # emit dtors
         if isTop:
             print("virtual")
         printDtor(key, value)
@@ -381,4 +465,9 @@ printClassDef()
 pE()
 printSimpleMatchAdapter()
 pE()
+printTraverseTemplateDecl()
+pE()
+printTraverseTemplate(patterns)
+pE()
+printAbstractAstVisitor(patterns)
 printFooter()
