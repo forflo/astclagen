@@ -1,34 +1,30 @@
 vhdl = {
     "AstNode" : {
         "parent" : None,
-        "members" : [
-            { "cppType" : "int", "name" : "startL"},
-            { "cppType" : "int", "name" : "endL"},
-            { "cppType" : "int", "name" : "startCol"},
-            { "cppType" : "int", "name" : "endCol"}
-        ]
+        "members" : []
     },
     "Architecture" : {
         "parent" : "AstNode",
         "members" : [
-            { "cppType" : "" }
+            { "astType" : "" }
         ]
     },
     "Entity" : {
         "parent" : "AstNode",
         "members" : [
-            { "cppType" : "Identifier", "name" : "id" },
-            { "cppType" : "GenericDecl", "name" : "generics" },
-            { "cppType" : "PortDecl", "name" : "ports" },
+            { "astType" : "Identifier", "name" : "id" },
+            { "astType" : "GenericDecl", "name" : "generics" },
+            { "astType" : "PortDecl", "name" : "ports" },
             # TODO: entity_statement_part
         ]
     },
     "Architecture" : {
         "parent" : "AstNode",
         "members" : [
-            { "cppType" : "Identifier", "name" : "archName"},
-            { "cppType" : "Identifier", "name" : "entityName"},
-            { "cppType" : "std::vector<ConcurrentStatement>", "name" : "concStatements"},
+            { "astType" : "Identifier", "name" : "archName"},
+            { "astType" : "Identifier", "name" : "entityName"},
+            { "astType" : "ConcStmt", "wrpType" : ["std::vector"],
+              "name" : "concStatements"},
         ]
     },
     "ConcStmt" : {"parent" : "AstNode", "members" : []},
@@ -36,75 +32,99 @@ vhdl = {
     "WaitStmt" : {
         "parent" : "SeqStmt",
         "members" : [
-            { "cppType" : "std::optional<std::vector<Identifier>>",
+            { "astType" : "Identifier",
+              "wrpType" : ["std::optional", "std::vector"],
               "name" : "waitSignals"},
-            { "cppType" : "Expression", "name" : "condition"},
-            { "cppType" : "Expression", "name" : "timeExpr"},
+            { "astType" : "Expression", "name" : "condition"},
+            { "astType" : "Expression", "name" : "timeExpr"},
         ]
     },
     "AssertStmt" : {
         "parent" : "SeqStmt",
         "members" : [
-            { "cppType" : "Expression", "name" : "stringExpression"},
-            { "cppType" : "std::string", "name" : "severity"},
+            { "astType" : "Expression", "name" : "stringExpression"},
+            { "astType" : "std::string", "name" : "severity"},
         ]
     },
     "SeqSigAssignStmt" : {
         "parent" : "SeqStmt",
         "members" : [
-            { "cppType" : "Expression", "name" : "target"},
-            { "cppType" : "Boolean", "name" : "transport"},
-            { "cppType" : "std::optional<Expression>", "name" : "afterTimeExpr"},
-            { "cppType" : "std::vector<SeqSigAssignStmtAfter>",
+            { "astType" : "Expression", "name" : "target"},
+            { "astType" : "Boolean", "name" : "transport"},
+            { "astType" : "Expression", "wrptype" : "std::optional",
+              "name" : "afterTimeExpr"},
+            { "astType" : "SeqSigAssignStmtAfter", "wrpType" : ["std::vector"],
               "name" : "expAfterList"},
         ]
     },
     "VarAssignStmt" : {
         "parent" : "SeqStmt",
         "members" : [
-            { "cppType" : "Expression", "name" : "target"},
-            { "cppType" : "Expression", "name" : "source"}
+            { "astType" : "Expression", "name" : "target"},
+            { "astType" : "Expression", "name" : "source"}
         ]
     },
     "ProcedureCallStmt" : {
         "parent" : "SeqStmt",
+        "members" : []
+    },
+    "ProcedureCallStmtFptr" : {
+        "parent" : "ProcedureCallStmt",
         "members" : [
-            { "cppType" : "Expression", "name" : "procedure"},
-            { "cppType" : "Expression", "name" : "source"}
+            { "astType" : "Expression", "name" : "procedure"},
+            { "astType" : "Expression",
+              "wrpType" : ["std::vector"],
+              "name" : "arguments"}
+        ]
+    },
+    "ProcedureCallStmtSimple" : {
+        "parent" : "ProcedureCallStmt",
+        "members" : [
+            { "astType" : "std::string", "name" : "procedure"},
+            { "astType" : "Expression",
+              "wrpType" : ["std::vector"],
+              "name" : "arguments"}
         ]
     },
     "SeqSigAssignStmtAfter" : {
         "parent" : "SeqStmt",
         "members" : [
-            { "cppType" : "Expression" , "name" : "expression" },
-            { "cppType" : "Expression" , "name" : "afterTimeExpr" },
+            { "astType" : "Expression" , "name" : "expression" },
+            { "astType" : "Expression" , "name" : "afterTimeExpr" },
         ]
     },
     "ProcessStmt" : {
         "parent" : "ConcStmt",
         "members" : [
-            { "cppType" : "std::optional<std::string>", "name" : "label" },
-            { "cppType" : "std::vector<Identifier>", "name" : "sensitivityList" },
-            { "cppType" : "std::vector<Decl>", "name" : "declarations" },
-            { "cppType" : "std::vector<SeqStmt>", "name" : "statements" },
+            { "astType" : "std::string", "wrpType" : ["std::optional"],
+              "name" : "label" },
+            { "astType" : "Identifier", "wrpType" : ["std::vector"],
+              "name" : "sensitivityList" },
+            { "astType" : "Decl", "wrpType" : ["std::vector"],
+              "name" : "declarations" },
+            { "astType" : "SeqStmt", "wrpType" : ["std::vector"],
+              "name" : "statements" },
         ]
     },
     "ConcSigAssign" : {"parent" : "AstNode", "members" : []},
     "ConcSigAssignSelect" : {
         "parent" : "ConcSigAssign",
         "members" : [
-            { "cppType" : "Expression", "name" : "selectionExpr" },
-            { "cppType" : "Expression", "name" : "target" },
-            { "cppType" : "std::vector<ConcSigAssignSelectElem>",
+            { "astType" : "Expression", "name" : "selectionExpr" },
+            { "astType" : "Expression", "name" : "target" },
+            { "astType" : "ConcSigAssignSelectElem",
+              "wrpType" : ["std::vector"],
               "name" : "selectElements" },
         ]
     },
     "ConcSigAssignSelectElem" : {
         "parent" : "AstNode",
         "members" : [
-            { "cppType" : "Expression", "name" : "source" },
-            { "cppType" : "std::optional<Expression>", "name" : "afterTimeExpr"},
-            { "cppType" : "std::vector<ChoiceElem>", "name" : "choices" },
+            { "astType" : "Expression", "name" : "source" },
+            { "astType" : "Expression", "wrpType" : ["std::optional"],
+              "name" : "afterTimeExpr"},
+            { "astType" : "ChoiceElem", "wrpType" : ["std::vector"],
+              "name" : "choices" },
         ]
     },
     "ChoiceElem" : {
@@ -114,21 +134,25 @@ vhdl = {
     "ConcSigAssignWhen" : {
         "parent" : "ConcSigAssign",
         "members" : [
-            { "cppType" : "std::optional<std::string>", "name" : "label"},
-            { "cppType" : "Expression", "name" : "targetExp"},
-            { "cppType" : "std::vector<ConcSigAssignWhenElem>", "name" : "whens" },
-            { "cppType" : "Boolean", "name" : "guarded" },
-            { "cppType" : "Expression", "name" : "sourceExp"},
+            { "astType" : "std::string", "wrpType" : ["std::optional"],
+              "name" : "label"},
+            { "astType" : "Expression", "name" : "targetExp"},
+            { "astType" : "ConcSigAssignWhenElem", "wrpType" : ["std::vector"],
+              "name" : "whens" },
+            { "astType" : "Boolean", "name" : "guarded" },
+            { "astType" : "Expression", "name" : "sourceExp"},
         ]
     },
     "ConcSigAssignWhenElem" : {
         "parent" : "AstNode",
         "members" : [
-            { "cppType" : "Expression", "name" : "sourceExp"},
-            { "cppType" : "std::optional<Expression>", "name" : "afterTimeExpr"},
-            { "cppType" : "Expression", "name" : "condExp"},
+            { "astType" : "Expression", "name" : "sourceExp"},
+            { "astType" : "Expression", "wrpType" : ["std::optional"],
+              "name" : "afterTimeExpr"},
+            { "astType" : "Expression", "name" : "condExp"},
         ]
     },
+    "Expression" : {"parent" : "AstNode", "members" : []},
     "Decl" : {
         "parent" : "AstNode",
         "members" : []
@@ -136,15 +160,56 @@ vhdl = {
     "GenericDecl" : {
         "parent" : "Decl",
         "members" : [
-            { "cppType" : "std::vector<GenericDeclElement>", "name" : "genericDeclElements" }
+            { "astType" : "GenericDeclElement", "wrpType" : ["std::vector"],
+              "name" : "genericDeclElements" }
         ]
     },
     "GenericDeclElement" : {
         "parent" : "Decl",
         "members" : [
-            { "cppType" : "std::vector<Identifier>", "name" : "identifierList"},
-            { "cppType" : "Type", "name" : "type"},
-            { "cppType" : "std::optional<Expression>", "name" : "initializerExp" }
+            { "astType" : "Identifier", "wrpType" : ["std::vector"],
+              "name" : "identifierList"},
+            { "astType" : "Type", "name" : "type"},
+            { "astType" : "Expression", "wrpType" : ["std::optional"],
+              "name" : "initializerExp" }
+        ]
+    },
+    "Type" : {"parent" : "AstNode", "members" : []},
+    # std_logic, integer, are considered builtIn
+    "TypeBuiltIn" : {
+        "parent" : "Type",
+        "members" : [
+            { "astType" : "std::string" , "name" : "typeName" }
+        ]
+    },
+    "TypeArray" : {
+        "parent" : "Type",
+        "members" : [
+            { "astType" : "Type" , "name" : "baseType" },
+            { "astType" : "std::vector<int>", "name" : "dimensions" }
+        ]
+    },
+    "TypeArrayOneDim" : {
+        "parent" : "Type",
+        "members" : [
+            { "astType" : "Type" , "name" : "baseType" },
+            { "astType" : "int", "name" : "dimensions" }
+        ]
+    },
+    "TypeDecl" : {"parent" : "Decl", "members" : []},
+    "TypeDecl" : {
+        "parent" : "TypeDecl",
+        "members" : [
+            { "astType" : "Identifier", "name" : "name"},
+            { "astType" : "Type", "name" : "type"},
+        ]
+    },
+    # TODO
+    "TypeDeclSubtype" : {
+        "parent" : "TypeDecl",
+        "members" : [
+            { "astType" : "Identifier", "name" : "name"},
+            { "astType" : "Type", "name" : "type"},
         ]
     },
     "PortDecl" : {
@@ -154,23 +219,27 @@ vhdl = {
     "PortDeclElement" : {
         "parent" : "Decl",
         "members" : [
-            { "cppType" : "std::vector<Identifier>", "name" : "portNames" },
-            { "cppType" : "std::string", "name" : "inOrOut"},
-            { "cppType" : "Type", "name" : "type" },
-            { "cppType" : "std::optional<Expression>", "name" : "initializerExp" }
+            { "astType" : "Identifier", "wrpType" : ["std::vector"],
+              "name" : "portNames" },
+            { "astType" : "std::string", "name" : "inOrOut"},
+            { "astType" : "Type", "name" : "type" },
+            { "astType" : "Expression", "wrpType" : ["std::optional"],
+              "name" : "initializerExp" }
         ]
     },
     "Identifier" : { "parent" : "AstNode", "members" : [] },
     "QualifiedIdentifier" : {
         "parent" : "Identifier",
         "members" : [
-            { "cppType" : "std::vector<std::string>", "name" : "qualifiedName" }
+            { "astType" : "std::string",
+              "wrpType" : ["std::vector"],
+              "name" : "qualifiedName" }
         ]
     },
     "SimpleIdentifier" : {
         "parent" : "Identifier",
         "members" : [
-            { "cppType" : "std::string", "name" : "id" }
+            { "astType" : "std::string", "name" : "id" }
         ]
     }
 }
@@ -184,28 +253,28 @@ lam = {
     "Var" : {
         "parent" : "Term",
         "members" : [
-            { "cppType" : "std::string", "name" : "name" }
+            { "astType" : "std::string", "name" : "name" }
         ]
     },
 
     "Abs" : {
         "parent" : "Term",
         "members" : [
-            { "cppType" : "std::string", "name" : "name" },
-            { "cppType" : "Term", "name" : "expression" }
+            { "astType" : "std::string", "name" : "name" },
+            { "astType" : "Term", "name" : "expression" }
         ]
     },
 
     "App" : {
         "parent": "Term",
         "members" : [
-            { "cppType" : "Term", "name" : ["nameExp", "absExp"] }
+            { "astType" : "Term", "name" : ["nameExp", "absExp"] }
         ]
     }
 }
 
-patterns = lam
-superClass = "Term"
+patterns = vhdl
+superClass = "AstNode"
 classNames = list(patterns.keys())
 
 def canProduceSubTree(typ):
@@ -219,6 +288,26 @@ def unifyNames(name):
         return name
     else:
         return [name]
+
+# breadth first traversal of `classes` using `superClass` as
+# starting point. The Edges of the traversal are given by the
+# parent child relationship
+def getBreadthOrder(classes, superClass):
+    result = []
+    nextSet = []
+    worklist = [superClass]
+    while len(worklist) > 0:
+        for i in worklist:
+            result.append(i)
+        for i in worklist:
+            succs = []
+            for c, e in classes.items():
+                if i == e["parent"]:
+                    succs.append(c)
+            nextSet += succs
+        worklist = nextSet
+        nextSet = []
+    return result
 
 def getAllLeafClasses(patterns):
     edges = []
@@ -286,7 +375,7 @@ def printSimpleMatchAdapter():
     for className, classEntry in patterns.items():
         toTie = []
         for member in classEntry["members"]:
-            typ = member["cppType"]
+            typ = member["astType"]
             name = member["name"]
             # gen tie
             for i in unifyNames(name):
@@ -313,6 +402,14 @@ def makeSharedWrapper(string, flag):
     else:
         return string
 
+def wrapUsingWrappers(wrappers, string):
+    result = string
+    if not wrappers:
+        return result
+    for wrapper in reversed(wrappers):
+        result = "%(wrapper)s<%(result)s>" % locals()
+    return result
+
 def printCtor(superClass, className, classEntry, shared):
     print("// CTOR")
     const = "" if not shared else "const"
@@ -322,24 +419,29 @@ def printCtor(superClass, className, classEntry, shared):
         return
     decls = []
     for member in classEntry["members"]:
-        typ = member["cppType"]
+        typ = member["astType"]
+        wrappers = member.get("wrpType")
         name = member["name"]
         st = canProduceSubTree(typ) and shared
         if type(name) is list:
             toJoin = []
             for i in name:
-                toJoin.append(const + " " + makeSharedWrapper(typ, st)
+                toJoin.append(const + " "
+                              + wrapUsingWrappers(wrappers,
+                                                  makeSharedWrapper(typ, st))
                               + alias + i)
             decls.append(", ".join(toJoin))
         else:
-            decls.append(const + " " + makeSharedWrapper(typ, st)
+            decls.append(const + " "
+                         + wrapUsingWrappers(wrappers,
+                                             makeSharedWrapper(typ, st))
                          + alias + name)
 
     print(className + "(" + ", ".join(decls) + ") : ")
     # init list
     toJoin = []
     for member in classEntry["members"]:
-        typ = member["cppType"]
+        typ = member["astType"]
         name = member["name"]
         if type(name) is list:
             for i in name:
@@ -351,6 +453,12 @@ def printCtor(superClass, className, classEntry, shared):
     print(", ".join(toJoin))
     print("{}")
 
+def wrapShared(name, flag):
+    if flag:
+        return "std::shared_ptr<" + name + ">"
+    else:
+        return name
+
 def wrapIntoShared(name, superClass, flag):
     if flag:
         return "std::shared_ptr<%(superClass)s>(%(name)s)" % locals()
@@ -360,7 +468,9 @@ def wrapIntoShared(name, superClass, flag):
 def printHeader():
     print("#include <memory>")
     print("#include <string>")
-    print("#include \"simple_match.hpp\"")
+    print("#include <vector>")
+    print("#include <optional>");
+    print("#include \"simple_match/include/simple_match/simple_match.hpp\"")
     print("""
     using namespace simple_match;
     using namespace simple_match::placeholders;
@@ -386,7 +496,7 @@ def getMembersCloneExprs(className):
     members = patterns[className]["members"]
     for i in members:
         name = i["name"]
-        typ = i["cppType"]
+        typ = i["astType"]
         clone = ""
         if canProduceSubTree(typ):
             clone = "->clone()"
@@ -402,7 +512,7 @@ def printCloneImpl(className, superClass):
     names = ",".join(toNames)
     print("""
     virtual std::shared_ptr<%(superClass)s> clone() override {
-        return std::static_pointer_cast<Term>(
+        return std::static_pointer_cast<%(superClass)s>(
            std::make_shared<%(className)s>(%(names)s)
         );
     }
@@ -411,13 +521,16 @@ def printCloneImpl(className, superClass):
 def needsConvenientCtor(className, classEntry):
     containsSubTree = False
     for member in classEntry["members"]:
-        typ = member["cppType"]
+        typ = member["astType"]
         treeable = canProduceSubTree(typ)
         containsSubTree = containsSubTree or treeable
     return containsSubTree
 
 def printClassDef():
-    for key, value in patterns.items():
+    order = getBreadthOrder(patterns, superClass)
+
+    for key in order:
+        value = patterns[key]
         isTop = value["parent"] == None
         if isTop:
             print("class " + key + " {")
@@ -425,14 +538,12 @@ def printClassDef():
             print("class " + key + " : public " + value["parent"] + " {")
         print("public:")
         for member in value["members"]:
-            typ = member["cppType"]
+            typ = member["astType"]
+            wrappers = member.get("wrpType")
             name = member["name"]
             treeable = canProduceSubTree(typ)
-            decl = ""
-            if treeable:
-                decl = decl + "std::shared_ptr<" + typ +  ">" + " "
-            else:
-                decl = decl + typ + " "
+            decl = wrapShared(typ, treeable)
+            decl = wrapUsingWrappers(wrappers, decl) + " "
             if type(name) is list:
                 decl = decl + ", ".join(name) + ";"
             else:
