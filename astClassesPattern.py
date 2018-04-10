@@ -197,7 +197,7 @@ vhdl = {
         ]
     },
     "TypeDecl" : {"parent" : "Decl", "members" : []},
-    "TypeDecl" : {
+    "TypeDeclSimple" : {
         "parent" : "TypeDecl",
         "members" : [
             { "astType" : "Identifier", "name" : "name"},
@@ -308,6 +308,91 @@ def getBreadthOrder(classes, superClass):
         worklist = nextSet
         nextSet = []
     return result
+
+def getDependenceGraph(classes, superClass):
+    edges = []
+    classSet = classes.keys()
+    for c in classSet:
+        relevantTypes = []
+        members = classes[c]["members"]
+        for member in members:
+            relevantTypes.append(member["astType"])
+        print(c)
+        print(relevantTypes)
+        for rt in relevantTypes:
+            edges.append((c, rt))
+    # now we have all dependencies
+    # dedupl
+    nodes = [superClass]
+    for e in edges:
+        nodes += e
+    nodesDedup = []
+    for n in nodes:
+        dupe = False
+        for d in nodesDedup:
+            if n == d:
+                dupe = True
+        if not dupe:
+            nodesDedup.append(n)
+    return (nodesDedup, edges)
+
+def getSuccessors(node, graph):
+    edges = graph[1]
+    result = []
+    for edge in edges:
+        fro = edge[0]
+        if fro == node:
+            result.append(fro)
+    return result
+
+def getTopolSort(graph, superClass):
+    nodes = graph[0]
+    edges = graph[1]
+    result = [superClass] # result order
+    # special case as the superClass is usually not connected
+    if superClass in nodes:
+        nodes.remove(superClass)
+    # init worklist
+    worklist = []
+    for n in nodes:
+        if len(getSuccessors(n, graph)) == 0:
+            worklist.append(n)
+    print(worklist)
+    # LEFTOFF. DOES NOT TERMINATE
+    while len(nodes) > 0:
+        result += worklist
+        for w in worklist:
+            if w in nodes: nodes.remove(w)
+        worklist = []
+        for n in nodes:
+            if len(getSuccessors(n, graph)) == 0:
+                worklist.append(n)
+    return result
+
+def getInheritanceGraph(classes, superClass):
+    edges = []
+    nodes = []
+    for cls, entry in classes.items():
+        parent = entry["parent"]
+        edges.append((parent, cls))
+        nodes.append(cls)
+        nodes.append(parent)
+    return (nodes, edges)
+
+def printAsDot(graph):
+    nodes = graph[0]
+    edges = graph[1]
+    res = ("strict digraph G {")
+    for n in nodes:
+        if n:
+            res += ("\"%(n)s\";" % locals())
+    for e in edges:
+        fro = e[0]
+        to = e[1]
+        if fro:
+            res += ("\"%(fro)s\" -> \"%(to)s\";" % locals())
+    res += ("}")
+    return res
 
 def getAllLeafClasses(patterns):
     edges = []
