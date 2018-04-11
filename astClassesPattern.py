@@ -273,6 +273,36 @@ lam = {
     }
 }
 
+class Graph:
+    nodes = []
+    edges = []
+    start = None
+
+    def invertEdges(self):
+        edges = []
+        for edge in self.edges:
+            fro = edge[0]
+            to = edge[1]
+            edges.append((to, fro))
+        return Graph(self.nodes.copy(), edges, self.start)
+
+    def successors(self, node):
+        result = []
+        for edge in self.edges:
+            fro = edge[0]
+            to = edge[1]
+            if fro == node and (to not in result):
+                result.append(to)
+        return result
+
+    def __init__(self, nodes, edges, start):
+        self.nodes = nodes
+        self.edges = edges
+        self.start = start
+
+    def asDot(self):
+        return printAsDot(self)
+
 patterns = vhdl
 superClass = "AstNode"
 classNames = list(patterns.keys())
@@ -317,15 +347,14 @@ def getDependenceGraph(classes, superClass):
         members = classes[c]["members"]
         for member in members:
             relevantTypes.append(member["astType"])
-        print(c)
-        print(relevantTypes)
         for rt in relevantTypes:
             edges.append((c, rt))
-    # now we have all dependencies
-    # dedupl
+    # now we have all dependency edges.
+    # Now add the nodes.
     nodes = [superClass]
     for e in edges:
         nodes += e
+    # deduplicate the nodes
     nodesDedup = []
     for n in nodes:
         dupe = False
@@ -334,40 +363,22 @@ def getDependenceGraph(classes, superClass):
                 dupe = True
         if not dupe:
             nodesDedup.append(n)
-    return (nodesDedup, edges)
-
-def getSuccessors(node, graph):
-    edges = graph[1]
-    result = []
-    for edge in edges:
-        fro = edge[0]
-        if fro == node:
-            result.append(fro)
-    return result
+    # until now the superClass is a unconnected node
+    # conservative assumption: everything depends on the superClass
+    nodes = nodesDedup
+    for node in nodes:
+        if node != superClass:
+            edges.append((node, superClass))
+    return Graph(nodes, edges, superClass)
 
 def getTopolSort(graph, superClass):
-    nodes = graph[0]
-    edges = graph[1]
-    result = [superClass] # result order
-    # special case as the superClass is usually not connected
-    if superClass in nodes:
-        nodes.remove(superClass)
-    # init worklist
-    worklist = []
-    for n in nodes:
-        if len(getSuccessors(n, graph)) == 0:
-            worklist.append(n)
-    print(worklist)
-    # LEFTOFF. DOES NOT TERMINATE
-    while len(nodes) > 0:
-        result += worklist
-        for w in worklist:
-            if w in nodes: nodes.remove(w)
-        worklist = []
-        for n in nodes:
-            if len(getSuccessors(n, graph)) == 0:
-                worklist.append(n)
-    return result
+    depthFirstTraversal(graph)
+    if not graph.acyclic:
+        print("You have cyclic dependencies in your class hierarchy!")
+        print("STOP")
+        sys.exit(1)
+
+    return
 
 def getInheritanceGraph(classes, superClass):
     edges = []
@@ -377,15 +388,46 @@ def getInheritanceGraph(classes, superClass):
         edges.append((parent, cls))
         nodes.append(cls)
         nodes.append(parent)
-    return (nodes, edges)
+    return Graph(nodes, edges, superClass)
+
+def depthFirstTraversal(graph):
+    nodes = graph.nodes
+    edges = graph.edges
+    graph.time = 0
+    graph.begunAt = {}
+    graph.finishedAt = {}
+    graph.acyclic = True
+    graph.colors = {}
+    for node in nodes:
+        graph.colors[node] = "white"
+    for node in nodes:
+        if graph.colors[node] == "white":
+            dftVisit(graph, node)
+
+# does not detect cross and forward edges!
+def dftVisit(graph, node):
+    graph.colors[node] = "grey"
+    graph.time = graph.time + 1
+    graph.begunAt[node] = graph.time
+    for succ in graph.successors(node):
+        if graph.colors[succ] == "white":
+            dftVisit(graph, succ)
+        if graph.colors[succ] == "grey":
+            graph.acyclic = False
+        if graph.colors[succ] == "black":
+            continue # test for forward edge
+    graph.colors[node] = "black"
+    graph.time = graph.time + 1
+    graph.finishedAt[node] = graph.time
 
 def printAsDot(graph):
-    nodes = graph[0]
-    edges = graph[1]
+    nodes = graph.nodes
+    edges = graph.edges
+    startNode = graph.start
     res = ("strict digraph G {")
+    print("\"%(startNode)s\";" % locals())
     for n in nodes:
-        if n:
-            res += ("\"%(n)s\";" % locals())
+        if n: res += ("\"%(n)s\";" % locals())
     for e in edges:
         fro = e[0]
         to = e[1]
