@@ -186,7 +186,9 @@ vhdl = {
         "parent" : "Type",
         "members" : [
             { "astType" : "Type" , "name" : "baseType" },
-            { "astType" : "std::vector<int>", "name" : "dimensions" }
+            { "astType" : "int",
+              "wrpType" : ["std::vector"],
+              "name" : "dimensions" }
         ]
     },
     "TypeArrayOneDim" : {
@@ -279,12 +281,21 @@ class Graph:
     start = None
 
     def invertEdges(self):
-        edges = []
+        result = []
         for edge in self.edges:
             fro = edge[0]
             to = edge[1]
-            edges.append((to, fro))
-        return Graph(self.nodes.copy(), edges, self.start)
+            result.append((to, fro))
+        self.edges = result
+        return self
+
+    # start node of this remains start node
+    def mergeGraphs(self, other):
+        for node in other.nodes:
+            if not (node in self.nodes): self.nodes.append(node)
+        for edge in other.edges:
+            if not (edge in self.edges): self.edges.append(edge)
+        return self
 
     def successors(self, node):
         result = []
@@ -371,14 +382,39 @@ def getDependenceGraph(classes, superClass):
             edges.append((node, superClass))
     return Graph(nodes, edges, superClass)
 
+def getClasses(classes):
+    result = []
+    for cls, entry in classes.items():
+        if not (cls in result): result.append(cls)
+    return result
+
+# merges the inheritance tree and the dependency tree
+# into one graph. The function then sorts the graph
+# topologically.
+def getTopolOrder(classes, superClass):
+    inhG = getInheritanceGraph(classes, superClass)
+    depG = getDependenceGraph(classes, superClass)
+    depG.invertEdges()
+    inhG.mergeGraphs(depG)
+    depthFirstTraversal(inhG)
+    topSort = getTopolSort(inhG, superClass)
+    # now remove all nodes that are _not_ members of the class hierarchy
+    result = []
+    allClasses = getClasses(classes)
+    topSort = list(map(lambda x: x[0], topSort))
+    for t in topSort:
+        if t in allClasses: result.append(t)
+    return result
+
 def getTopolSort(graph, superClass):
     depthFirstTraversal(graph)
     if not graph.acyclic:
         print("You have cyclic dependencies in your class hierarchy!")
         print("STOP")
         sys.exit(1)
-
-    return
+    prelim = sorted(graph.finishedAt.items(), key = lambda x : x[1])
+    prelim.reverse()
+    return prelim
 
 def getInheritanceGraph(classes, superClass):
     edges = []
@@ -537,46 +573,39 @@ def wrapUsingWrappers(wrappers, string):
         result = "%(wrapper)s<%(result)s>" % locals()
     return result
 
-def printCtor(superClass, className, classEntry, shared):
+# Assumption: Every type used that is not part of the
+# hierarchy in `patterns` is considered triviallyCopyable
+def isTriviallyCopyable(typ):
+    return not canProduceSubTree(typ)
+
+def printCtor(superClass, className, classEntry):
     print("// CTOR")
-    const = "" if not shared else "const"
-    alias = " &" if shared else " *"
     if len(classEntry["members"]) == 0:
         print(className + "(){}")
         return
     decls = []
+    # Generate Ctor signature
     for member in classEntry["members"]:
         typ = member["astType"]
         wrappers = member.get("wrpType")
-        name = member["name"]
-        st = canProduceSubTree(typ) and shared
-        if type(name) is list:
-            toJoin = []
-            for i in name:
-                toJoin.append(const + " "
-                              + wrapUsingWrappers(wrappers,
-                                                  makeSharedWrapper(typ, st))
-                              + alias + i)
-            decls.append(", ".join(toJoin))
-        else:
-            decls.append(const + " "
-                         + wrapUsingWrappers(wrappers,
-                                             makeSharedWrapper(typ, st))
-                         + alias + name)
-
+        name = unifyNames(member["name"])
+        treeable = canProduceSubTree(typ)
+        sharedType = makeSharedWrapper(typ, treeable)
+        toJoin = []
+        for i in name:
+            toJoin.append("const "
+                          + wrapUsingWrappers(wrappers, sharedType)
+                          + "& " + i)
+        decls.append(", ".join(toJoin))
+    # Generate init list
     print(className + "(" + ", ".join(decls) + ") : ")
-    # init list
     toJoin = []
     for member in classEntry["members"]:
         typ = member["astType"]
-        name = member["name"]
-        if type(name) is list:
-            for i in name:
-                toJoin.append(i + "("
-                              + wrapIntoShared(i, superClass, not shared) + ")")
-        else:
-            toJoin.append(name + "("
-                          + wrapIntoShared(name, superClass, not shared)+ ")")
+        wrappers = member.get("wrpType")
+        name = unifyNames(member["name"])
+        for i in name:
+            toJoin.append(i + "(" + i + ")")
     print(", ".join(toJoin))
     print("{}")
 
@@ -618,27 +647,27 @@ def printClassProto():
 def printCloneProto(superClass):
     print("virtual std::shared_ptr<%(superClass)s> clone() = 0;" % locals())
 
-def getMembersCloneExprs(className):
+def getCtorParams(className):
     res = []
     members = patterns[className]["members"]
     for i in members:
-        name = i["name"]
+        name = unifyNames(i["name"])
+        wrapper = i["wrpType"]
         typ = i["astType"]
-        clone = ""
-        if canProduceSubTree(typ):
-            clone = "->clone()"
-        if type(name) is list:
-            for i in name:
-                res.append(i + clone)
-        else:
-            res.append(name + clone)
+        for i in name:
+            res.append((i, wrapper, ))
     return res
 
 def printCloneImpl(className, superClass):
-    toNames = getMembersCloneExprs(className)
+    toNames = getCtorParams(className)
     names = ",".join(toNames)
+    auto = []
+    for name in toNames:
+        auto.append("auto %(name)s_tmp = foo;" % locals())
+    auto = "\n".join(auto)
     print("""
     virtual std::shared_ptr<%(superClass)s> clone() override {
+    %(auto)s
         return std::static_pointer_cast<%(superClass)s>(
            std::make_shared<%(className)s>(%(names)s)
         );
@@ -654,7 +683,7 @@ def needsConvenientCtor(className, classEntry):
     return containsSubTree
 
 def printClassDef():
-    order = getBreadthOrder(patterns, superClass)
+    order = getTopolOrder(patterns, superClass)
 
     for key in order:
         value = patterns[key]
@@ -677,9 +706,7 @@ def printClassDef():
                 decl = decl + name + ";"
             print(decl)
         # emit ctors
-        printCtor(superClass, key, value, True)
-        if needsConvenientCtor(key, value):
-            printCtor(superClass, key, value, False)
+        printCtor(superClass, key, value)
         # emit dtors
         if isTop:
             print("virtual")
