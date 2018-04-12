@@ -50,8 +50,8 @@ vhdl = {
         "parent" : "SeqStmt",
         "members" : [
             { "astType" : "Expression", "name" : "target"},
-            { "astType" : "Boolean", "name" : "transport"},
-            { "astType" : "Expression", "wrptype" : "std::optional",
+            { "astType" : "bool", "name" : "transport"},
+            { "astType" : "Expression", "wrpType" : ["std::optional"],
               "name" : "afterTimeExpr"},
             { "astType" : "SeqSigAssignStmtAfter", "wrpType" : ["std::vector"],
               "name" : "expAfterList"},
@@ -139,7 +139,7 @@ vhdl = {
             { "astType" : "Expression", "name" : "targetExp"},
             { "astType" : "ConcSigAssignWhenElem", "wrpType" : ["std::vector"],
               "name" : "whens" },
-            { "astType" : "Boolean", "name" : "guarded" },
+            { "astType" : "bool", "name" : "guarded" },
             { "astType" : "Expression", "name" : "sourceExp"},
         ]
     },
@@ -274,6 +274,106 @@ lam = {
         ]
     }
 }
+
+class Wrappee:
+    wrappee = None
+
+    def __init__(self, wrappee):
+        self.wrappee = wrappee
+
+    def getWrapped(self):
+        treeable = canProduceSubTree(self.wrappee)
+        if treeable:
+            return "std::shared_ptr<" + self.wrappee + ">"
+        return self.wrappee
+
+    def getBase(self):
+        return self.wrappee
+
+class TypeDecl:
+    # True True means std::optional<std::vector<wrappee>>
+    optional = False
+    vector = False
+    name = ""
+    treeable = None
+    wrappee = None # for example Expression
+
+    def __init__(self, wrappers, wrappee, name):
+        if not wrappers: wrappers = []
+        if len(wrappers) > 2:
+            printf("too many wrappers")
+            printf("can only contain optional, vector or both")
+            sys.exit(1)
+        for w in wrappers:
+            if w not in ["std::optional", "std::vector"]:
+                print("Can only be std::optional or std::vector")
+                sys.exit(1)
+        if "std::optional" in wrappers: self.optional = True
+        if "std::vector" in wrappers: self.vector = True
+        self.treeable = canProduceSubTree(wrappee)
+        self.name = name
+        self.wrappee = Wrappee(wrappee)
+
+    def maybeWrapOpt(self, string):
+        return "std::optional<%(string)s>" % locals() if self.optional else string
+
+    def maybeWrapVec(self, string):
+        return "std::vector<%(string)s>" % locals() if self.vector else string
+
+    def wrapConstRef(self, string):
+        return "const " + string + " &"
+
+    def getVarDecl(self, name):
+        str = self.wrappee.getWrapped()
+        return self.maybeWrapOpt(self.maybeWrapVec(str))
+
+    def getParamDecl(self, name):
+        str = self.wrappee.getWrapped()
+        return self.wrapConstRef(self.maybeWrapOpt(self.maybeWrapVec(str)))
+
+def getCloneCode(typeDecls, className):
+    code = []
+    copies = []
+    for td in typeDecls:
+        nameOrig = td.name
+        nameCopy = td.name + "_copy"
+        typeDecl = td.getVarDecl("")
+        baseType = td.wrappee.getBase()
+        copies.append(nameCopy)
+        if td.treeable:
+            code.append("%(typeDecl)s %(nameCopy)s;" % locals())
+            if td.vector and td.optional:
+                code.append("if (%(nameOrig)s.has_value()) {" % locals())
+                code.append("""
+                for (auto &i : *%(nameOrig)s) {
+                %(nameCopy)s->push_back(
+                std::dynamic_pointer_cast<%(baseType)s>(i->clone())
+                );
+                }
+                """ % locals())
+                code.append("}")
+            if td.vector and not td.optional:
+                code.append("""
+                for (auto &i : %(nameOrig)s) {
+                %(nameCopy)s.push_back(
+                std::dynamic_pointer_cast<%(baseType)s>(i->clone())
+                );
+                }
+                """ % locals())
+            if not td.vector and td.optional:
+                code.append("if (%(nameOrig)s.has_value()) {" % locals())
+                code.append("""
+                %(nameCopy)s = std::dynamic_pointer_cast<%(baseType)s>(
+                (*%(nameOrig)s)->clone());
+                """ % locals())
+                code.append("}")
+            if not td.vector and not td.optional:
+                code.append("""
+                %(nameCopy)s = std::dynamic_pointer_cast<%(baseType)s>(%(nameOrig)s->clone());
+                """ % locals())
+        else:
+            code.append("%(typeDecl)s %(nameCopy)s = %(nameOrig)s;" % locals())
+    return (code, copies)
 
 class Graph:
     nodes = []
@@ -504,7 +604,7 @@ def printAbstractAstVisitor(patterns):
     };
     """ % locals())
 
-def printTraverseTemplate(classes):
+def printTraverseTemplate(classes, superClass):
     patterns = []
     leafs = getAllLeafClasses(classes)
     for l in leafs:
@@ -514,23 +614,23 @@ def printTraverseTemplate(classes):
     print("""
     template<typename P, typename R>
     R traverse(AstVisitor<P, R> *v,
-    const std::shared_ptr<Term> &t,
+    const std::shared_ptr<%(superClass)s> &t,
     P &initial) {
     using namespace simple_match;
     using namespace simple_match::placeholders;
     return match(t,
-    %(patterns)s
+    %(patterns)s ,
     none(),      [&]()      { return v->visitNull(initial); });
     }
     """ % locals())
 
-def printTraverseTemplateDecl():
+def printTraverseTemplateDecl(superClass):
     print("""
     template<typename P, typename R>
     R traverse(AstVisitor<P, R>,
-    const std::shared_ptr<Term> &,
+    const std::shared_ptr<%(superClass)s> &,
     P &);
-    """)
+    """ % locals())
 
 def printSimpleMatchAdapter():
     print("namespace simple_match {")
@@ -588,14 +688,11 @@ def printCtor(superClass, className, classEntry):
     for member in classEntry["members"]:
         typ = member["astType"]
         wrappers = member.get("wrpType")
-        name = unifyNames(member["name"])
-        treeable = canProduceSubTree(typ)
-        sharedType = makeSharedWrapper(typ, treeable)
+        names = unifyNames(member["name"])
         toJoin = []
-        for i in name:
-            toJoin.append("const "
-                          + wrapUsingWrappers(wrappers, sharedType)
-                          + "& " + i)
+        for name in names:
+            typeDecl = TypeDecl(wrappers, typ, name)
+            toJoin.append(typeDecl.getParamDecl(name) + " " + name)
         decls.append(", ".join(toJoin))
     # Generate init list
     print(className + "(" + ", ".join(decls) + ") : ")
@@ -647,27 +744,16 @@ def printClassProto():
 def printCloneProto(superClass):
     print("virtual std::shared_ptr<%(superClass)s> clone() = 0;" % locals())
 
-def getCtorParams(className):
-    res = []
-    members = patterns[className]["members"]
-    for i in members:
-        name = unifyNames(i["name"])
-        wrapper = i["wrpType"]
-        typ = i["astType"]
-        for i in name:
-            res.append((i, wrapper, ))
-    return res
-
-def printCloneImpl(className, superClass):
-    toNames = getCtorParams(className)
-    names = ",".join(toNames)
-    auto = []
-    for name in toNames:
-        auto.append("auto %(name)s_tmp = foo;" % locals())
-    auto = "\n".join(auto)
+def printCloneImpl(typeDecls, className, superClass):
+    cloneCodeTups = getCloneCode(typeDecls, className)
     print("""
     virtual std::shared_ptr<%(superClass)s> clone() override {
-    %(auto)s
+    """ % locals())
+
+    print("\n".join(cloneCodeTups[0]))
+    names = ",".join(cloneCodeTups[1])
+
+    print("""
         return std::static_pointer_cast<%(superClass)s>(
            std::make_shared<%(className)s>(%(names)s)
         );
@@ -693,18 +779,17 @@ def printClassDef():
         else:
             print("class " + key + " : public " + value["parent"] + " {")
         print("public:")
+        typeDecls = []
+        typeDeclStrs = []
         for member in value["members"]:
             typ = member["astType"]
             wrappers = member.get("wrpType")
-            name = member["name"]
-            treeable = canProduceSubTree(typ)
-            decl = wrapShared(typ, treeable)
-            decl = wrapUsingWrappers(wrappers, decl) + " "
-            if type(name) is list:
-                decl = decl + ", ".join(name) + ";"
-            else:
-                decl = decl + name + ";"
-            print(decl)
+            names = unifyNames(member["name"])
+            for name in names:
+                typeDecl = TypeDecl(wrappers, typ, name)
+                typeDecls.append(typeDecl)
+                typeDeclStrs.append(typeDecl.getVarDecl(name) + " " + name + ";")
+        print("\n".join(typeDeclStrs))
         # emit ctors
         printCtor(superClass, key, value)
         # emit dtors
@@ -715,7 +800,7 @@ def printClassDef():
         if isTop:
             printCloneProto(key)
         else:
-            printCloneImpl(key, superClass)
+            printCloneImpl(typeDecls, key, superClass)
         print("};")
         print("")
 
@@ -730,9 +815,9 @@ printClassDef()
 pE()
 printSimpleMatchAdapter()
 pE()
-printTraverseTemplateDecl()
-pE()
-printTraverseTemplate(patterns)
-pE()
 printAbstractAstVisitor(patterns)
+pE()
+printTraverseTemplateDecl(superClass)
+pE()
+printTraverseTemplate(patterns, superClass)
 printFooter()
