@@ -1554,6 +1554,34 @@ std::string prettyPrint(const std::shared_ptr<AstNode> &t) {
                  none(), [](){return std::string("");});
 }
 
+// changes each 10 into a 30
+void change(const std::shared_ptr<AstNode> &t) {
+    using namespace simple_match;
+    using namespace simple_match::placeholders;
+    match(t,
+          some<ExpressionBinary>(ds(_x, _x, _x)),
+          [](auto &lhs, auto &rhs, auto &){
+              change(lhs);
+              change(rhs);},
+          some<ExpressionUnary>(ds(_x, _x)),
+          [](auto &operand, auto &){
+              return change(operand);},
+          some<Integer>(ds(_x)),
+          [](auto &value){
+              if (value == 10) {
+                  value = 30;
+              }
+          },
+          some<IfStatement>(ds(_x, _x, _x, _x)),
+          [](auto &a, auto &then, auto &, auto &){
+              for (auto &i : then) {
+                  change(i);
+              }
+              change(a);
+          },
+          none(), [](){});
+}
+
 int main(void) {
     // represents the expression (10+12) * (5+15)
     auto expr = std::make_shared<ExpressionBinary>
@@ -1567,5 +1595,10 @@ int main(void) {
           "+"),
          "*");
 
+    auto clone = expr->clone();
+
     std::cout << prettyPrint(expr) << std::endl;
+    change(expr);
+    std::cout << prettyPrint(expr) << std::endl;
+    std::cout << prettyPrint(clone) << std::endl;
 }

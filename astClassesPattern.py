@@ -39,6 +39,26 @@ vhdl = {
             { "astType" : "Expression", "name" : "timeExpr"},
         ]
     },
+    "IfStatement" : {
+        "parent" : "SeqStmt",
+        "members" : [
+            { "astType" : "Expression", "name" : "condition"},
+            { "astType" : "SeqStmt",
+              "wrpType" : ["std::vector"], "name" : "thenStmts"},
+            { "astType" : "ElsIfBlocks",
+              "wrpType" : ["std::vector"], "name" : "elsifs"},
+            { "astType" : "SeqStmt",
+              "wrpType" : ["std::vector"], "name" : "elseStmts"},
+        ]
+    },
+    "ElsIfBlocks" : {
+        "parent" : "AstNode",
+        "members" : [
+            { "astType" : "Expression", "name" : "condition"},
+            { "astType" : "SeqStmt",
+              "wrpType" : ["std::vector"], "name" : "stmts"},
+        ]
+    },
     "AssertStmt" : {
         "parent" : "SeqStmt",
         "members" : [
@@ -153,6 +173,27 @@ vhdl = {
         ]
     },
     "Expression" : {"parent" : "AstNode", "members" : []},
+    "ExpressionBinary" : {
+        "parent" : "Expression",
+        "members" : [
+            { "astType" : "Expression", "name" : "lhs"},
+            { "astType" : "Expression", "name" : "rhs"},
+            { "astType" : "std::string", "name" : "op"},
+        ]
+    },
+    "ExpressionUnary" : {
+        "parent" : "Expression",
+        "members" : [
+            { "astType" : "Expression", "name" : "operand"},
+            { "astType" : "std::string", "name" : "op"},
+        ]
+    },
+    "Integer" : {
+        "parent" : "Expression",
+        "members" : [
+            { "astType" : "long", "name" : "value"},
+        ]
+    },
     "Decl" : {
         "parent" : "AstNode",
         "members" : []
