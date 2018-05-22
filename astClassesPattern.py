@@ -15,7 +15,8 @@ vhdl = {
             { "astType" : "Identifier", "name" : "id" },
             { "astType" : "GenericDecl", "name" : "generics" },
             { "astType" : "PortDecl", "name" : "ports" },
-            # TODO: entity_statement_part
+            { "astType" : "Decl", "wrpType" : ["std::vector"], "name" : "declarativePart"}
+            # entity_statement_part is ignored IEEE 1076.6-2004 p48
         ]
     },
     "Architecture" : {
@@ -23,8 +24,8 @@ vhdl = {
         "members" : [
             { "astType" : "Identifier", "name" : "archName"},
             { "astType" : "Identifier", "name" : "entityName"},
-            { "astType" : "ConcStmt", "wrpType" : ["std::vector"],
-              "name" : "concStatements"},
+            { "astType" : "Decl", "wrpType" : ["std::vector"], "name" : "declarativePart"},
+            { "astType" : "ConcStmt", "wrpType" : ["std::vector"], "name" : "concStatements"},
         ]
     },
     "ConcStmt" : {"parent" : "AstNode", "members" : []},
@@ -197,6 +198,119 @@ vhdl = {
     "Decl" : {
         "parent" : "AstNode",
         "members" : []
+    },
+    # IEEE 1076.6-2004 p 51
+    # configuration id of entity_name is ... end configuration
+    "ConfigDecl" : {
+        "parent" : "Decl",
+        "members" : [
+            { "astType" : "std::string", "name" : "identifier"},
+            { "astType" : "std::string", "name" : "entityName"},
+            { "astType" : "AuxConfigDeclItem", "wrpType" : ["std::vector"], "name" : "declarativePart"},
+            { "astType" : "BlockConfig", "name" : "blockConfiguration"}
+        ]
+    },
+    "AuxConfigDeclItem" : {
+        "parent" : "AstNode",
+        "members" : [
+            { "astType" : "UseClause", "name" : "useClause"},
+            { "astType" : "AttrSpec", "name" : "attributeSpecification"},
+        ]
+    },
+    # IEEE 1076.6-2004 p 51
+    "BlockConfig" : {
+        "parent" : "AstNode",
+        "members" : [
+            { "astType" : "AuxBlockSpec", "name" : "blockSpecification" },
+            { "astType" : "UseClause", "wrpType" : ["std::vector"], "name" : "useClause" },
+            { "astType" : "ConfigItem", "wrpType" : ["std::vector"], "name" : "configurationItems" },
+        ]
+    },
+
+    # Config Item
+    "ConfigItem" : {
+        "parent" : "AstNode",
+        "members" : []
+    },
+    "ConfigItemBlock" : {
+        "parent" : "ConfigItem",
+        "members" : [
+            { "astType" : "BlockConfig", "name" : "blockConfig" },
+        ]
+    },
+    "ConfigItemCompConfig" : {
+        "parent" : "ConfigItem",
+        "members" : [
+            { "astType" : "ComponentConfig", "name" : "blockConfig" },
+        ]
+    },
+    # End Config Item
+
+    # BEGIN BLOCK SPEC
+    "AuxBlockSpec" : {
+        "parent" : "AstNode",
+        "members" : []
+    },
+    "AuxBlockSpecArchName" : {
+        "parent" : "AuxBlockSpec",
+        "members" : [
+            { "astType" : "std::string", "name" : "archName" },
+        ]
+    },
+    "AuxBlockSpecLabel" : {
+        "parent" : "AuxBlockSpec",
+        "members" : [
+            { "astType" : "std::string", "name" : "statementLabel" }
+        ]
+    },
+    # IEEE p 51 says that instead of the range a simple expression could also be
+    # used here. But nope. This simplification is no permanent limitation, hence
+    # it is ommitted
+    "AuxBlockSpecGenerate" : {
+        "parent" : "AuxBlockSpec",
+        "members" : [
+            { "astType" : "std::string", "name" : "generateLabel" },
+            { "astType" : "Range", "name" : "range" }
+        ]
+    },
+    # END BLOCK SPEC
+
+    ## Component configuration
+    "ComponentConfig" : {
+        "parent" : "AstNode",
+        "members" : [
+            { "astType" : "", "name" : "" },
+            { "astType" : "BindingInd", "wrpType" :  ["std::optional"], "name" : "bindingIndication" },
+            { "astType" : "BlockConfig", "wrpType" :  ["std::optional"], "name" : "blockConfiguration" },
+        ]
+    },
+
+    "BindingInd" : {
+        "parent" : "AstNode",
+        "members" : []
+    },
+    "BindingIndUse" : {
+        "parent" : "BindingInd",
+        "members" : [ # HACK: only one member can be non-empty!
+                      # 1076.6-2004 p 97 "entity_aspect"
+            { "astType" : "std::string", "name" : "entityName" },
+            { "astType" : "std::string", "name" : "archName" },
+            { "astType" : "std::string", "name" : "configName" },
+        ]
+    },
+    ## TODO
+    "BindingIndGenMap" : {"parent" : "BindingInd", "members" : [] },
+    ## TODO
+    "BindingIndPortMap" : {"parent" : "BindingInd", "members" : [] },
+
+
+    "Range" : {
+        "parent" : "AstNode",
+        "members" : [
+            { "astType" : "Expression", "name" : "leftExpression" },
+            { "astType" : "std::string", "name" : "direction" },
+            { "astType" : "Expression", "name" : "rightExpression" }
+        ]
     },
     "GenericDecl" : {
         "parent" : "Decl",
@@ -700,20 +814,6 @@ def printDtor(className, classEntry):
     print("// DTOR")
     print("~" + className + "(){}")
 
-def makeSharedWrapper(string, flag):
-    if flag:
-        return "std::shared_ptr<" + string + ">"
-    else:
-        return string
-
-def wrapUsingWrappers(wrappers, string):
-    result = string
-    if not wrappers:
-        return result
-    for wrapper in reversed(wrappers):
-        result = "%(wrapper)s<%(result)s>" % locals()
-    return result
-
 # Assumption: Every type used that is not part of the
 # hierarchy in `patterns` is considered triviallyCopyable
 def isTriviallyCopyable(typ):
@@ -746,18 +846,6 @@ def printCtor(superClass, className, classEntry):
             toJoin.append(i + "(" + i + ")")
     print(", ".join(toJoin))
     print("{}")
-
-def wrapShared(name, flag):
-    if flag:
-        return "std::shared_ptr<" + name + ">"
-    else:
-        return name
-
-def wrapIntoShared(name, superClass, flag):
-    if flag:
-        return "std::shared_ptr<%(superClass)s>(%(name)s)" % locals()
-    else:
-        return name
 
 def printHeader():
     print("#include <memory>")
@@ -800,14 +888,6 @@ def printCloneImpl(typeDecls, className, superClass):
         );
     }
     """ % locals())
-
-def needsConvenientCtor(className, classEntry):
-    containsSubTree = False
-    for member in classEntry["members"]:
-        typ = member["astType"]
-        treeable = canProduceSubTree(typ)
-        containsSubTree = containsSubTree or treeable
-    return containsSubTree
 
 def printClassDef():
     order = getTopolOrder(patterns, superClass)
