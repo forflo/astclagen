@@ -60,13 +60,21 @@ vhdl = {
               "wrpType" : ["std::vector"], "name" : "stmts"},
         ]
     },
-    "AssertStmt" : {
-        "parent" : "SeqStmt",
+    "Assertion" : {
+        "parent" : "AstNode",
         "members" : [
-            { "astType" : "Expression", "name" : "stringExpression"},
-            { "astType" : "std::string", "name" : "severity"},
+            { "astType" : "Expression", "name" : "condition"},
+            { "astType" : "Expression", "name" : "reportString"},
+            { "astType" : "Expression", "name" : "severity"},
         ]
     },
+    "AssertConcStmt" : { "parent" : "ConcStmt", "members" : [
+        { "astType" : "Assertion", "name" : "assertion"},
+    ]},
+    "AssertSeqStmt" : { "parent" : "SeqStmt", "members" : [
+        { "astType" : "Expression", "name" : "stringExpression"},
+        { "astType" : "std::string", "name" : "severity"},
+    ]},
     "SeqSigAssignStmt" : {
         "parent" : "SeqStmt",
         "members" : [
@@ -173,6 +181,7 @@ vhdl = {
             { "astType" : "Expression", "name" : "condExp"},
         ]
     },
+    # IEEE 1076.6-2004 p71
     "Expression" : {"parent" : "AstNode", "members" : []},
     "ExpressionBinary" : {
         "parent" : "Expression",
@@ -189,6 +198,53 @@ vhdl = {
             { "astType" : "std::string", "name" : "op"},
         ]
     },
+    "ExpressionName" : {
+        "parent" : "Expression",
+        "members" : [
+            { "astType" : "Name", "name" : "name" },
+        ]
+    },
+    "ExpressionLiteral" : {
+        "parent" : "Expression",
+        "members" : [
+            { "astType" : "Literal", "name" : "literal" },
+        ]
+    },
+    "ExpressionFunctionCall" : {
+        "parent" : "Expression",
+        "members" : [
+            { "astType" : "Name", "name" : "functionName" },
+            { "astType" : "ActualParameterPart", "name" : "functionName" },
+        ]
+    },
+    "ExpressionTypeConf" : {
+        "parent" : "Expression",
+        "members" : [
+            { "astType" : "TypeConversion", "name" : "typeConversion" },
+        ]
+    },
+    # IEEE 1076.6 p 106. qualified_expression ::= type_mark'(expression) |...
+    # This non-terminal is actually only used in the production of primary.
+    "ExpressionQualifiedExpr" : {
+        "parent" : "Expression",
+        "members" : [
+            # TODO qualified_expression
+            { "astType" : "Expression", "name" : "expression" },
+        ]
+    },
+    "ExpressionExpression" : {
+        "parent" : "Expression",
+        "members" : [
+            { "astType" : "Expression", "name" : "expression" },
+        ]
+    },
+    "ExpressionAggregate" : {
+        "parent" : "Expression",
+        "members" : [
+            { "astType" : "", "name" : ""},
+        ]
+    },
+
     "Integer" : {
         "parent" : "Expression",
         "members" : [
@@ -206,26 +262,139 @@ vhdl = {
         "members" : [
             { "astType" : "std::string", "name" : "identifier"},
             { "astType" : "std::string", "name" : "entityName"},
-            { "astType" : "AuxConfigDeclItem", "wrpType" : ["std::vector"], "name" : "declarativePart"},
+            { "astType" : "ConfigDeclItem", "wrpType" : ["std::vector"], "name" : "declarativePart"},
             { "astType" : "BlockConfig", "name" : "blockConfiguration"}
         ]
     },
-    "AuxConfigDeclItem" : {
+    "ConfigDeclItem" : {
         "parent" : "AstNode",
         "members" : [
             { "astType" : "UseClause", "name" : "useClause"},
             { "astType" : "AttrSpec", "name" : "attributeSpecification"},
         ]
     },
+    "AttributeDecl" : {
+        "example" : "attribute foo : integer;",
+        "parent" : "Decl",
+        "members" : [
+            { "astType" : "std::string", "name" : "identifier" },
+            { "astType" : "TODO", "name" : "type" }, #TODO
+        ]
+    },
+    "AttributeSpecification" : {
+        "example" : "attribute foo of entityBar is '0010';",
+        "parent" : "Decl",
+        "members" : [
+            { "astType" : "std::string", "name" : "name"},
+            { "astType" : "EntitySpec", "name" : "name"},
+            { "astType" : "Expression", "name" : "expression"},
+        ]
+    },
+    # p 104: prefix ::= name | functinon_call. Simplified to
+    # prefix ::= name | expression
+    "Prefix" : {"parent" : "AstNode", "members" : []},
+    "PrefixName" : {"parent" : "Prefix", "members" : [
+        { "astType" : "Name", "name" : "name" },
+    ]},
+    "PrefixCall" : {"parent" : "Prefix", "members" : [
+        { "astType" : "Expression", "name" : "functionCall" },
+    ]},
+    # TODO: UNSIMPLIFY!
+    # p 108: suffix ::= simple_name | character_literal | operator_symbol | "all"
+    # simplified to suffix ::= character_string
+    "Suffix" : {"parent" : "AstNode", "members" : [
+        { "astType" : "std::string", "name" : "suffixString" },
+    ]},
+    "OperatorSymbol" : {"parent" : "AstNode", "members" : [
+        { "astType" : "std::string", "name" : "operator"}
+    ]},
+    # p 102: name ::= simple_name | operator_symbol | selected_name
+    #               | indexed_name | slice_name | attrib_name
+    # simple_name and operator_symbol simplified to std::string
+    "Name" : {"parent" : "AstNode", "members" : []},
+    "AttributeName" : {"parent" : "Name", "members" : [
+        { "astType" : "Prefix", "name" : "prefixExp" }, # TODO
+        { "astType" : "Signature", "wrpType" : ["std::optional"], "name" : "prefixExp" },
+        { "astType" : "std::string", "name" : "attributeName" },
+        { "astType" : "Expression", "wrpType": ["std::optional"], "name" : "expression" },
+    ]},
+    "SelectedName" : {"parent" : "Name", "members" : [
+        { "astType" : "Prefix", "name" : "prefix" },
+        { "astType" : "Suffix", "name" : "suffix" },
+    ]},
+    # p100: IndexedName ::= prefix ( {expression}+ )
+    "IndexedName" : {"parent" : "Name", "members" : [
+        { "astType" : "Prefix", "name" : "prefix" },
+        { "astType" : "Expression", "wrpType" : ["std::vector"], "name" : "indexExpressions" },
+    ]},
+    # p102: SliceName ::= prefix ( discrete_range )
+    # discrete_range ::= discrete_subtype_indication | range. However IEEE 1076.6-2004
+    # does not specify what discrete_subtype_indication looks like. We let
+    # discrete_range be simply a range. Semantic analysis must check, that the
+    # upper and lower bounds of the ranges both are discrete values
+    "SliceName" : {"parent" : "Name", "members" : [
+        { "astType" : "Prefix", "name" : "prefix" },
+        { "astType" : "Range", "name" : "sliceRange" },
+    ]},
+    "OperatorName" : {"parent" : "Name", "members" : [
+        { "astType" : "std::string", "name" : "operator" },
+    ]},
+    "SimpleName" : {"parent" : "Name", "members" : [
+        { "astType" : "std::string", "name" : "identifier" },
+    ]},
+
+
+    # This simplifies IEEE1076.6-2004 p 98 rule 'entity_tag' and
+    # 'entity_designator'
+    # a string is used to represent the non-terminals simple_name
+    # character_literal and operator_symbol
+    "EntityDesignator" : {"parent" : "AstNode", "members" : [
+        { "astType" : "std::string", "name" : "entityTag" },
+        # { "astType" : "Signature", "name" : "signature" } # TODO
+    ]},
+
+    "EntityNameList" : {"parent" : "AstNode", "members" : []},
+    "EntityNameListDesignators" : {"parent" : "EntityNameList", "members" : [
+        { "astType" : "EntityDesignator", "wrpType" : ["std::vector"], "name" : "entityDesignators" },
+    ]},
+    "EntityNameListOthers" : {"parent" : "EntityNameList", "members" : []}, # represents others
+    "EntityNameListAll" : {"parent" : "EntityNameList", "members" : []}, # represents all
+
+    "EntitySpec" : {
+        "parent" : "AstNode",
+        "members" : [
+            { "astType" : "EntityNameList", "name" : "entityNameList" },
+            # according to IEEE1076.6-2004 this is supposed to be a full syntax
+            # intendet do be reused. However in the context of 1076.6-2004 it
+            # is never used elsewhere. Hence the encoding as simple string
+            # is possible. (See p 97 rule entity_class)
+            { "astType" : "std::string", "name" : "entityClass" },
+        ]
+    },
+    "" : {
+        "parent" : "",
+        "members" : [
+            { "astType" : "", "name" : "" }
+        ]
+    },
+
     # IEEE 1076.6-2004 p 51
+    # for block_specification {use_clause} {configuration_item} end for;
     "BlockConfig" : {
         "parent" : "AstNode",
         "members" : [
-            { "astType" : "AuxBlockSpec", "name" : "blockSpecification" },
+            { "astType" : "BlockSpec", "name" : "blockSpecification" },
             { "astType" : "UseClause", "wrpType" : ["std::vector"], "name" : "useClause" },
             { "astType" : "ConfigItem", "wrpType" : ["std::vector"], "name" : "configurationItems" },
         ]
     },
+
+    # IEEE 1076.6-2004 p 109
+    # use {selected_name}+
+    "UseClause" : { "parent" : "AstNode", "members" : [
+        { "astType" : "SelectedName", "wrpType" : ["std::vector"], "name" : "selectedName" }
+    ]},
+
 
     # Config Item
     "ConfigItem" : {
@@ -247,18 +416,18 @@ vhdl = {
     # End Config Item
 
     # BEGIN BLOCK SPEC
-    "AuxBlockSpec" : {
+    "BlockSpec" : {
         "parent" : "AstNode",
         "members" : []
     },
-    "AuxBlockSpecArchName" : {
-        "parent" : "AuxBlockSpec",
+    "BlockSpecArchName" : {
+        "parent" : "BlockSpec",
         "members" : [
             { "astType" : "std::string", "name" : "archName" },
         ]
     },
-    "AuxBlockSpecLabel" : {
-        "parent" : "AuxBlockSpec",
+    "BlockSpecLabel" : {
+        "parent" : "BlockSpec",
         "members" : [
             { "astType" : "std::string", "name" : "statementLabel" }
         ]
@@ -266,8 +435,8 @@ vhdl = {
     # IEEE p 51 says that instead of the range a simple expression could also be
     # used here. But nope. This simplification is no permanent limitation, hence
     # it is ommitted
-    "AuxBlockSpecGenerate" : {
-        "parent" : "AuxBlockSpec",
+    "BlockSpecGenerate" : {
+        "parent" : "BlockSpec",
         "members" : [
             { "astType" : "std::string", "name" : "generateLabel" },
             { "astType" : "Range", "name" : "range" }
@@ -304,8 +473,17 @@ vhdl = {
     "BindingIndPortMap" : {"parent" : "BindingInd", "members" : [] },
 
 
-    "Range" : {
-        "parent" : "AstNode",
+    # IEEE 1076.6-2004 p 106: range ::= range_attribute_name
+    #                                 | expression direction expression
+    "Range" : { "parent" : "AstNode", "members" : [] },
+    "RangeAttrib" : {
+        "parent" : "Range",
+        "members" : [
+            { "astType" : "AttributeName", "name" : "rangeAttribute" },
+        ]
+    },
+    "RangeDirectional" : {
+        "parent" : "Range",
         "members" : [
             { "astType" : "Expression", "name" : "leftExpression" },
             { "astType" : "std::string", "name" : "direction" },
