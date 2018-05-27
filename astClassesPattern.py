@@ -562,21 +562,78 @@ vhdl = {
         ]
     },
     "TypeDecl" : {"parent" : "Decl", "members" : []},
-    "TypeDeclSimple" : {
+    # IEEE 1076.6-2004 p 61:
+    # type_declaration ::= full_type_declaration | incomplete_type_declaration
+    # incomplete_type_declaration is marked `ignore`.
+    # Hence, we don't include it here
+    # type identifier is type_definition;
+    "TypeDeclFull" : {
         "parent" : "TypeDecl",
         "members" : [
-            { "astType" : "Identifier", "name" : "name"},
-            { "astType" : "Type", "name" : "type"},
+            # IEEE 1076.6-2004 p100
+            # identifier ::= basic_identifier | extended_identifier
+            { "astType" : "std::string", "name" : "identifier"},
+            { "astType" : "TypeDef", "name" : "typeDefinition"},
         ]
     },
-    # TODO
+    # IEEE1076.6-2004 p.62
     "TypeDeclSubtype" : {
         "parent" : "TypeDecl",
         "members" : [
-            { "astType" : "Identifier", "name" : "name"},
-            { "astType" : "Type", "name" : "type"},
+            # subtype
+            { "astType" : "std::string", "name" : "name"},
+            # is
+            { "astType" : "Name", "wrpType" : ["std::optional"], "name" : "resolutionFunctionName"},
+            { "astType" : "Name", "name" : "typeMark" },
+            # According to IEEE 1076.6-2004 p.62, the actual rule here would be:
+            # constraint ::= range_constraint | index_constraint
+            # range_constraint ::= "range" range
+            # index_constraint ::= discrete_range { "," discrete_range }*
+            { "astType" : "Range", "wrpType" : ["std::vector"],
+              "name" : "rangeConstraint" },
+            # ;
         ]
     },
+    "TypeDef" : { "parent" : "AstNode", "members" : [] },
+    "TypeDefEnum" : { "parent" : "TypeDef", "members" : [
+        # IEEE 1076.6-2004 p.57: enumeration_literal ::= identifier | character_literal
+        { "astType" : "std::string", "wrpType" : ["std::vector"], "name" : "enumLiteral" }
+    ]},
+    "TypeDefInteger" : { "parent" : "TypeDef", "members" : [
+        { "astType" : "Range", "name" : "rangeConstraint" }
+    ]},
+    "TypeDefInteger" : { "parent" : "TypeDef", "members" : [
+        { "astType" : "Range", "name" : "rangeConstraint" }
+    ]},
+    # floating_type_definition ::= range_constraint. Marked `ignore`
+    "TypeDefArray" : { "parent" : "TypeDef", "members" : []},
+    # IEEE 1076.6-2004 p.59
+    # unconstrained_array_definition ::=
+    #   array ( index_subtype_definition {, index_subtype_defintion} )
+    #   of subtype_indication
+    # index_subtype_definition ::= type_mark "range" "<>"
+    # We simplify type_mark = name (IEEE1076-2004 p.109)
+    "TypeDefArrayUnconstr" : { "parent" : "TypeDefArray", "members" : [
+        # array
+        # (
+        { "astType" : "Name", "wrpType" : ["std::vector"], "name" : "typeMarks" },
+        # .. range <>) of <subtype_indication>
+        { "astType" : "Name", "wrpType" : ["std::optional"], "name" : "resolutionFunctionName" },
+        { "astType" : "Name", "name" : "typeMark" },
+        { "astType" : "Range", "wrpType" : ["std::vector"], "name" : "constraint" },
+    ]},
+    "TypeDefArrayConstr" : { "parent" : "TypeDefArray", "members" : [
+        # array
+        { "astType" : "Range", "wrpType" : ["std::vector"], "name" : "indexConstraints" },
+        # of <subtype_indication>:
+        { "astType" : "Name", "wrpType" : ["std::optional"], "name" : "resolutionFunctionName" },
+        { "astType" : "Name", "name" : "typeMark" },
+        { "astType" : "Range", "wrpType" : ["std::vector"], "name" : "constraint" },
+    ]},
+    "TypeDefRecord" : { "parent" : "TypeDef", "members" : [
+        { "astType" : "", "name" : "" }
+    ]},
+
     "PortDecl" : {
         "parent" : "Decl",
         "members" : []
