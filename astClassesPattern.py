@@ -33,6 +33,7 @@ vhdl = {
     "WaitStmt" : {
         "parent" : "SeqStmt",
         "members" : [
+            { "astType" : "std::string" , "name" : "label" },
             { "astType" : "Identifier",
               "wrpType" : ["std::optional", "std::vector"],
               "name" : "waitSignals"},
@@ -188,6 +189,7 @@ vhdl = {
         "members" : [
             { "astType" : "Expression", "name" : "lhs"},
             { "astType" : "Expression", "name" : "rhs"},
+            # For operator reference review IEEE1076.6-2004 p72
             { "astType" : "std::string", "name" : "op"},
         ]
     },
@@ -238,14 +240,42 @@ vhdl = {
             { "astType" : "Expression", "name" : "expression" },
         ]
     },
-    "ExpressionAggregate" : {
+    "ExpressionAggregate" : {"parent" : "Expression", "members" : [
+        { "astType" : "ElementAssociation", "wrpType" : ["std::vector"],
+          "name" : "elementAssociations" },
+    ]},
+    "ElementAssociation" : { "parent" : "AstNode", "members" : [
+        { "astType" : "Choice", "wrpType" : ["std::vector"],
+          "name" : "choices" },
+    ]},
+    # IEEE 1076.6-2004
+    # choice ::= simple_expression | discrete_range | simple_name | others
+    # We simplify to choice ::= expression | range | others
+    # simple_expression produces everything in expression including simple_name
+    "Choice" : { "parent" : "AstNode", "members" : [] },
+    "ChoiceExpression" : { "parent" : "Choice", "members" : [
+        { "astType" : "Expression", "name" : "expression" }
+    ] },
+    "ChoiceRange" : { "parent" : "Choice", "members" : [
+        { "astType" : "Range", "name" : "range" }
+    ] },
+    "ChoiceOthers" : { "parent" : "AstNode", "members" : [] },
+    # Literals roughly as defined in IEEE 1076.6-2004 p 73
+    "RealLiteral" : {
         "parent" : "Expression",
         "members" : [
-            { "astType" : "", "name" : ""},
+            { "astType" : "double", "name" : "value"},
         ]
     },
-
-    "Integer" : {
+    "StringLiteral" : { "parent" : "Expression", "members" : [
+        { "astType" : "std::string", "name" : "value"},
+    ]},
+    "BitStringLiteral" : { "parent" : "Expression", "members" : [
+        { "astType" : "std::string", "name" : "baseSpecifier", "allowedValues" : ["B", "O", "X"] },
+        { "astType" : "std::string", "name" : "value"},
+    ]},
+    # Subsumes IEEE 1076.6-2004 'based_literal' and 'integer'
+    "IntegerLiteral" : {
         "parent" : "Expression",
         "members" : [
             { "astType" : "long", "name" : "value"},
