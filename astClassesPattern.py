@@ -281,10 +281,43 @@ vhdl = {
             { "astType" : "long", "name" : "value"},
         ]
     },
-    "Decl" : {
-        "parent" : "AstNode",
-        "members" : []
-    },
+    "Decl" : { "parent" : "AstNode", "members" : [] },
+    # IEEE 1076.6-2004 p.63 (a)
+    "ConstantDecl" : { "parent" : "Decl", "members" : [
+        # constant
+        { "astType" : "std::string", "wrpType" : ["std::vector"],
+          "name" : "identifierList" },
+        # :
+        # subtype_indication
+        { "astType" : "Name", "wrpType" : ["std::optional"], "name" :
+          "resolutionFunctionName" },
+        { "astType" : "Name", "name" : "typeMark" },
+        { "astType" : "Range", "wrpType" : ["std::vector"],
+          "name" : "constraint" },
+        # :=
+        # init expression
+        { "astType" : "Expression", "name" : "initExpression" },
+    ]},
+    # IEEE 1076.6-2004 p.63 (b) marks the initiation expression as ignore.
+    # As a consequence, we don't include it here
+    "SignalDeclaration" : { "parent" : "Decl", "members" : [
+        # signal
+        # identifier_list
+        { "astType" : "std::string", "wrpType" : ["std::vector"],
+          "name" : "identifierList" },
+        # : subtype_indication
+        { "astType" : "Name", "wrpType" : ["std::optional"], "name" :
+          "resolutionFunctionName" },
+        { "astType" : "Name", "name" : "typeMark" },
+        { "astType" : "Range", "wrpType" : ["std::vector"],
+          "name" : "constraint" },
+        # signal_kind
+        { "astType" : "std::string", "name" : "signalKind",
+          "allowedValues" : ["register", "bus"] },
+        { "astType" : "", "name" : "" },
+        # := expression (marked ignore)
+    ]},
+
     # IEEE 1076.6-2004 p 51
     # configuration id of entity_name is ... end configuration
     "ConfigDecl" : {
@@ -537,6 +570,8 @@ vhdl = {
               "name" : "initializerExp" }
         ]
     },
+
+    ## MARK: obsolete
     "Type" : {"parent" : "AstNode", "members" : []},
     # std_logic, integer, are considered builtIn
     "TypeBuiltIn" : {
@@ -545,6 +580,7 @@ vhdl = {
             { "astType" : "std::string" , "name" : "typeName" }
         ]
     },
+    ## MARK: obsolete
     "TypeArray" : {
         "parent" : "Type",
         "members" : [
@@ -554,6 +590,7 @@ vhdl = {
               "name" : "dimensions" }
         ]
     },
+    ## MARK: obsolete
     "TypeArrayOneDim" : {
         "parent" : "Type",
         "members" : [
@@ -618,20 +655,45 @@ vhdl = {
         # (
         { "astType" : "Name", "wrpType" : ["std::vector"], "name" : "typeMarks" },
         # .. range <>) of <subtype_indication>
-        { "astType" : "Name", "wrpType" : ["std::optional"], "name" : "resolutionFunctionName" },
+        { "astType" : "Name", "wrpType" : ["std::optional"], "name" :
+          "resolutionFunctionName" },
         { "astType" : "Name", "name" : "typeMark" },
-        { "astType" : "Range", "wrpType" : ["std::vector"], "name" : "constraint" },
+        { "astType" : "Range", "wrpType" : ["std::vector"],
+          "name" : "constraint" },
     ]},
     "TypeDefArrayConstr" : { "parent" : "TypeDefArray", "members" : [
         # array
-        { "astType" : "Range", "wrpType" : ["std::vector"], "name" : "indexConstraints" },
+        { "astType" : "Range", "wrpType" : ["std::vector"],
+          "name" : "indexConstraints" },
         # of <subtype_indication>:
-        { "astType" : "Name", "wrpType" : ["std::optional"], "name" : "resolutionFunctionName" },
+        { "astType" : "Name", "wrpType" : ["std::optional"],
+          "name" : "resolutionFunctionName" },
         { "astType" : "Name", "name" : "typeMark" },
-        { "astType" : "Range", "wrpType" : ["std::vector"], "name" : "constraint" },
+        { "astType" : "Range", "wrpType" : ["std::vector"],
+          "name" : "constraint" },
     ]},
+
+    # IEEE 1076.6-2004 p.60
     "TypeDefRecord" : { "parent" : "TypeDef", "members" : [
-        { "astType" : "", "name" : "" }
+        # record
+        { "astType" : "std::string", "wrpType" : ["std::optional"],
+          "name" : "identifier" }, # element_declaration
+        # end record
+        { "astType" : "std::string", "wrpType" : ["std::optional"],
+          "name" : "identifier" }, # element_declaration
+    ]},
+    # An element declaration is the part of a record defintion where a name
+    # or a list of names is associated with type marks
+    "ElementDeclaration" : {"parent" : "AstNode", "members" : [
+        { "astType" : "std::string", "wrpType" : ["std::vector"],
+          "name" : "identifierList" },
+        # element_subtype_indication ::= subtype_indication
+        #   (see IEEE 1076.6-2004 p.60)
+        { "astType" : "Name", "wrpType" : ["std::optional"],
+          "name" : "resolutionFunctionName" },
+        { "astType" : "Name", "name" : "typeMark" },
+        { "astType" : "Range", "wrpType" : ["std::vector"],
+          "name" : "constraint" },
     ]},
 
     "PortDecl" : {
