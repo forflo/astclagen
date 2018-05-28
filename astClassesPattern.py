@@ -365,6 +365,13 @@ vhdl = {
         { "astType" : "Name", "name" : "typeOrSubtypeName" },
     ]},
 
+    # IEEE 1076.6-2004 p.66
+    "ComponentDecl" : { "parent" : "Decl" , "members" : [
+        # component
+        { "astType" : "std::string" , "name" : "identifier" },
+        # [ is ]
+        { "astType" : "" , "name" : "identifier" },
+    ]},
 
     # IEEE 1076.6-2004 p 51
     # configuration id of entity_name is ... end configuration
