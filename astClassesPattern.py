@@ -1,3 +1,5 @@
+# TODO: Change all subtype_indication to optional constraint
+
 vhdl = {
     "AstNode" : {
         "parent" : None,
@@ -328,13 +330,32 @@ vhdl = {
         { "astType" : "Name", "wrpType" : ["std::optional"], "name" :
           "resolutionFunctionName" },
         { "astType" : "Name", "name" : "typeMark" },
-        { "astType" : "Range", "wrpType" : ["std::vector"],
+        { "astType" : "Range", "wrpType" : ["std::optional", "std::vector"],
           "name" : "constraint" },
         # := expression (marked ignore)
     ]},
     # IEEE 1076.6-2004 p.63 (d) marks the file_declaration as ignore
     # As a consequence, we don't include it here
     # .
+
+    # IEEE 1076.6-2004 p.66
+    "AliasDecl" : { "parent" : "Decl", "members" : [
+        # alias_designator ::= identifier | character_literal | operator_symbol
+        # We can encode all of these productions into a std::string
+        { "astType" : "std::string", "name" : "aliasDesignator" },
+        # : subtype_indication
+        { "astType" : "Name", "wrpType" : ["std::optional"], "name" :
+          "resolutionFunctionName" },
+        { "astType" : "Name", "name" : "typeMark" },
+        { "astType" : "Range", "wrpType" : ["std::optional", "std::vector"],
+          "name" : "constraint" },
+        { "astType" : "Name", "name" : "destinationAlias" },
+        # signature (IEEE 1076.6-2004 p.107)
+        { "astType" : "Name", "wrpType" : ["std::optional", "std::vector"],
+          "name" : "typeMarks" },
+        { "astType" : "Name", "wrpType" : ["std::optional"],
+          "name" : "returnTypeMark" },
+    ]},
 
     # IEEE 1076.6-2004 p 51
     # configuration id of entity_name is ... end configuration
