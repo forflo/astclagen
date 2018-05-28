@@ -357,6 +357,15 @@ vhdl = {
           "name" : "returnTypeMark" },
     ]},
 
+    # IEEE 1076.6-2004 p.66
+    "AttributeDecl" : { "parent" : "Decl", "members" : [
+        # attribute
+        { "astType" : "std::string", "name" : "identifier" },
+        # :
+        { "astType" : "Name", "name" : "typeOrSubtypeName" },
+    ]},
+
+
     # IEEE 1076.6-2004 p 51
     # configuration id of entity_name is ... end configuration
     "ConfigDecl" : {
@@ -374,14 +383,6 @@ vhdl = {
         "members" : [
             { "astType" : "UseClause", "name" : "useClause"},
             { "astType" : "AttrSpec", "name" : "attributeSpecification"},
-        ]
-    },
-    "AttributeDecl" : {
-        "example" : "attribute foo : integer;",
-        "parent" : "Decl",
-        "members" : [
-            { "astType" : "std::string", "name" : "identifier" },
-            { "astType" : "TODO", "name" : "type" }, #TODO
         ]
     },
     "AttributeSpecification" : {
