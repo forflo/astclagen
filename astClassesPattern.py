@@ -300,7 +300,7 @@ vhdl = {
     ]},
     # IEEE 1076.6-2004 p.63 (b) marks the initiation expression as ignore.
     # As a consequence, we don't include it here
-    "SignalDeclaration" : { "parent" : "Decl", "members" : [
+    "SignalDecl" : { "parent" : "Decl", "members" : [
         # signal
         # identifier_list
         { "astType" : "std::string", "wrpType" : ["std::vector"],
@@ -317,6 +317,24 @@ vhdl = {
         { "astType" : "", "name" : "" },
         # := expression (marked ignore)
     ]},
+    # IEEE 1076.6-2004 p.63 (c) marks the initiation expression as ignore.
+    # As a consequence, we don't include it here
+    "VariableDecl" : { "parent" : "Decl", "members" : [
+        # variable
+        # identifier_list
+        { "astType" : "std::string", "wrpType" : ["std::vector"],
+          "name" : "identifierList" },
+        # : subtype_indication
+        { "astType" : "Name", "wrpType" : ["std::optional"], "name" :
+          "resolutionFunctionName" },
+        { "astType" : "Name", "name" : "typeMark" },
+        { "astType" : "Range", "wrpType" : ["std::vector"],
+          "name" : "constraint" },
+        # := expression (marked ignore)
+    ]},
+    # IEEE 1076.6-2004 p.63 (d) marks the file_declaration as ignore
+    # As a consequence, we don't include it here
+    # .
 
     # IEEE 1076.6-2004 p 51
     # configuration id of entity_name is ... end configuration
@@ -325,7 +343,8 @@ vhdl = {
         "members" : [
             { "astType" : "std::string", "name" : "identifier"},
             { "astType" : "std::string", "name" : "entityName"},
-            { "astType" : "ConfigDeclItem", "wrpType" : ["std::vector"], "name" : "declarativePart"},
+            { "astType" : "ConfigDeclItem", "wrpType" : ["std::vector"],
+              "name" : "declarativePart"},
             { "astType" : "BlockConfig", "name" : "blockConfiguration"}
         ]
     },
