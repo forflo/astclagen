@@ -365,6 +365,7 @@ vhdl = {
         { "astType" : "Name", "name" : "typeOrSubtypeName" },
     ]},
 
+    # IEEE 1076.6-2004 p.64
     "InterfaceDecl" : { "parent" : "Decl", "members" : []},
     "InterfaceDeclConst" : { "parent" : "Decl", "members" : [
         # constant
@@ -424,10 +425,15 @@ vhdl = {
         # component
         { "astType" : "std::string" , "name" : "identifier" },
         # [ is ]
-        { "astType" : "" , "name" : "identifier" },
+        { "astType" : "InterfaceDecl", "wrpType" : ["std::vector"],
+          "name" : "localGenericClause" },
+        # generic ( ...
+        { "astType" : "InterfaceDecl", "wrpType" : ["std::vector"],
+          "name" : "localGenericClauses" }, # ...)
+        # port ( ...
+        { "astType" : "InterfaceDecl", "wrpType" : ["std::vector"],
+          "name" : "localPortClauses" }, # ...)
     ]},
-
-    ### LEFTOFF
 
     # IEEE 1076.6-2004 p 51
     # configuration id of entity_name is ... end configuration
@@ -448,16 +454,41 @@ vhdl = {
             { "astType" : "AttrSpec", "name" : "attributeSpecification"},
         ]
     },
-    "AttributeSpecification" : {
-        "example" : "attribute foo of entityBar is '0010';",
-        "parent" : "Decl",
-        "members" : [
-            { "astType" : "std::string", "name" : "name"},
-            { "astType" : "EntitySpec", "name" : "name"},
-            { "astType" : "Expression", "name" : "expression"},
-        ]
-    },
-    # p 104: prefix ::= name | functinon_call. Simplified to
+
+    # IEEE 1076.6-2004 p.67
+    "AttributeSpecification" : { "parent" : "AstNode", "members" : [
+        { "astType" : "std::string", "name" : "attributeName" },
+        { "astType" : "SyntaxEntitySpec", "name" : "syntaxEntitySpec" },
+        { "astType" : "Expression", "name" : "expression" },
+    ]},
+    # IEEE 1076.6-2004 p.67
+    "SyntaxEntitySpec" : { "parent" : "AstNode", "members" : [
+        { "astType" : "SyntaxEntityName", "wrpType" : ["std::vector"],
+          "name" : "syntaxEntities" },
+        # entity_class (IEEE 1076.6-2004 p.67)
+        { "astType" : "std::string", "name" : "entityClass",
+          "allowedValues" : [
+              "entity", "architecture", "configuration", "procedure",
+              "function", "package", "type", "subtype", "constant",
+              "signal", "variable", "component", "label", "literal",
+              "units"
+          ]
+        }
+    ]},
+    # IEEE 1076.6 p67
+    # represents entity_name_list
+    # We use a string to encode everything a entity_tag can be
+    # The original productions for reference:
+    # entity_name_list ::= entity_designator {, entity_designator}
+    # entity_designator ::= entity_tag [signature]
+    # entity_tag ::= identifier | character_literal | operator_symbol
+    "SyntaxEntityName" : { "parent" : "AstNode" , "members" : [
+        { "astType" : "std::string", "name" : "entity_tag" },
+        { "astType" : "Signature", "wrpType" : ["std::optional"],
+          "name" : "signature" }
+    ]},
+
+    # p.104: prefix ::= name | functinon_call. Simplified to
     # prefix ::= name | expression
     "Prefix" : {"parent" : "AstNode", "members" : []},
     "PrefixName" : {"parent" : "Prefix", "members" : [
