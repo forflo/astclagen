@@ -475,7 +475,7 @@ vhdl = {
           ]
         }
     ]},
-    # IEEE 1076.6 p67
+    # IEEE 1076.6 p.67
     # represents entity_name_list
     # We use a string to encode everything a entity_tag can be
     # The original productions for reference:
@@ -486,6 +486,48 @@ vhdl = {
         { "astType" : "std::string", "name" : "entity_tag" },
         { "astType" : "Signature", "wrpType" : ["std::optional"],
           "name" : "signature" }
+    ]},
+
+    # IEEE 1076.6 p.68
+    # represents component_specification
+    "ConfigurationSpecification" : { "parent" : "AstNode", "members" : [
+        { "astType" : "ComponentSpecification", "name" : "componentName" },
+        # binding_indication is inlined here
+        { "astType" : "EntityAspect", "wrpType" : ["std::optional"],
+          "name" : "entityAspect" },
+        { "astType" : "GenericMapAspect", "wrpType" : ["std::optional"],
+          "name" : "genericMapAspect" },
+        { "astType" : "PortMapAspect", "wrpType" : ["std::optional"],
+          "name" : "portMapAspect" },
+    ]},
+
+    # IEEE 1076.6 p.68
+    # represents component_specification
+    "ComponentSpecification" : { "parent" : "AstNode", "members" : [
+        # simplified form from instantiation_list ::= label {, label} | others | all
+        # since both keywords easily encode into this string vector
+        { "astType" : "std::string", "wrpType" : ["std::vector"],
+          "name" : "labelsOrOthersOrAll" },
+        { "astType" : "Name", "name" : "componentName" }
+    ]},
+
+    "EntityAspect" : { "parent" : "AstNode", "members" : []},
+    "EntityAspectOpen" : { "parent" : "EntityAspect", "members" : []},
+    "EntityAspectEntity" : { "parent" : "EntityAspect", "members" : [
+        { "astType" : "Name", "name" : "entityName" },
+        { "astType" : "std::string", "wrpType" : ["std::optional"],
+          "name" : "archIdentifier" },
+    ]},
+    "EntityAspectConfig" : { "parent" : "EntityAspect", "members" : [
+        { "astType" : "Name", "name" : "configurationName" },
+    ]},
+
+    "GenericMapAspect" : { "parent" : "AstNode", "members" : [
+        ## TODO: AssociationList!
+    ]},
+
+    "PortMapAspect" : { "parent" : "AstNode", "members" : [
+        ## TODO: AssociationList!
     ]},
 
     # p.104: prefix ::= name | functinon_call. Simplified to
