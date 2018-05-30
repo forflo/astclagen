@@ -365,6 +365,60 @@ vhdl = {
         { "astType" : "Name", "name" : "typeOrSubtypeName" },
     ]},
 
+    "InterfaceDecl" : { "parent" : "Decl", "members" : []},
+    "InterfaceDeclConst" : { "parent" : "Decl", "members" : [
+        # constant
+        { "astType" : "std::string", "wrpType" : ["std::vector"],
+          "name" : "identifiers" },
+        # in
+        # subtype_indication
+        { "astType" : "Name", "wrpType" : ["std::optional"], "name" :
+          "resolutionFunctionName" },
+        { "astType" : "Name", "name" : "typeMark" },
+        { "astType" : "Range", "wrpType" : ["std::optional", "std::vector"],
+          "name" : "constraint" },
+        { "astType" : "Name", "name" : "destinationAlias" },
+        # (static) initializer expression
+        { "astType" : "Expression", "name" : "initExpression" }
+    ]},
+    # IEEE 1076.6-2004 p.101
+    "InterfaceDeclSig" : { "parent" : "Decl", "members" : [
+        # signal
+        { "astType" : "std::string", "wrpType" : ["std::vector"],
+          "name" : "identifiers" },
+        # mode
+        { "astType" : "std::string", "name" : "mode",
+          "allowedValues" : ["in", "out", "inout", "buffer"] },
+        # subtype_indication
+        { "astType" : "Name", "wrpType" : ["std::optional"], "name" :
+          "resolutionFunctionName" },
+        { "astType" : "Name", "name" : "typeMark" },
+        { "astType" : "Range", "wrpType" : ["std::optional", "std::vector"],
+          "name" : "constraint" },
+        { "astType" : "Name", "name" : "destinationAlias" },
+        # busflag
+        { "astType" : "bool", "name" : "hasBusFlag" },
+        # (static) initializer expression
+        { "astType" : "Expression", "name" : "initExpression" }
+    ]},
+    "InterfaceDeclVar" : { "parent" : "Decl", "members" : [
+        # variable
+        { "astType" : "std::string", "wrpType" : ["std::vector"],
+          "name" : "identifiers" },
+        # mode
+        { "astType" : "std::string", "name" : "mode",
+          "allowedValues" : ["in", "out", "inout", "buffer"] },
+        # subtype_indication
+        { "astType" : "Name", "wrpType" : ["std::optional"], "name" :
+          "resolutionFunctionName" },
+        { "astType" : "Name", "name" : "typeMark" },
+        { "astType" : "Range", "wrpType" : ["std::optional", "std::vector"],
+          "name" : "constraint" },
+        { "astType" : "Name", "name" : "destinationAlias" },
+        # (static) initializer expression
+        { "astType" : "Expression", "name" : "initExpression" }
+    ]},
+
     # IEEE 1076.6-2004 p.66
     "ComponentDecl" : { "parent" : "Decl" , "members" : [
         # component
@@ -372,6 +426,8 @@ vhdl = {
         # [ is ]
         { "astType" : "" , "name" : "identifier" },
     ]},
+
+    ### LEFTOFF
 
     # IEEE 1076.6-2004 p 51
     # configuration id of entity_name is ... end configuration
