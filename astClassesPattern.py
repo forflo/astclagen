@@ -539,11 +539,10 @@ vhdl = {
     ]},
 
     "GenericMapAspect" : { "parent" : "AstNode", "members" : [
-        ## TODO: AssociationList!
+        { "astType" : "AssociationList", "name" : "genericAssocList" },
     ]},
-
     "PortMapAspect" : { "parent" : "AstNode", "members" : [
-        ## TODO: AssociationList!
+        { "astType" : "AssociationList", "name" : "portAssocList" },
     ]},
 
     ## Simplifications used for association_list (IEEE 1076.6-2004 p.65):
@@ -597,8 +596,6 @@ vhdl = {
           "name" : "formalName" },
         { "astType" : "Expression", "name" : "actualExpression" }
     ]},
-
-
 
     # p.104: prefix ::= name | functinon_call. Simplified to
     # prefix ::= name | expression
