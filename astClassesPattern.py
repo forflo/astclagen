@@ -567,6 +567,7 @@ vhdl = {
     ##            can be expressed by
     ##            a simple indexd_name (IEEE 1076.6-2004 p.70) we finally conclude to
     ##    formal_part''' ::= name
+    ##    ---------------------------
     ##
     ## => actual_part was
     ##    actual_part ::= actual_designator
@@ -584,10 +585,18 @@ vhdl = {
     ##                  | name ( expression )
     ##            which is the same as
     ##    actual_part' ::= expression
+    ##    ---------------------------
     ##            since name (expression) already is an indexed_expression and thus
     ##            can be reduced to expression.
-    ##
-    ##
+    "AssociationList" : { "parent" : "AstNode", "members" : [
+        { "astType" : "AssociationElem", "wrpType" : ["std::vector"],
+          "name" : "assocElementList" }
+    ]},
+    "AssociationElement" : { "parent" : "AstNode", "members" : [
+        { "astType" : "Name", "wrpType" : ["std::optional"],
+          "name" : "formalName" },
+        { "astType" : "Expression", "name" : "actualExpression" }
+    ]},
 
 
     # p.104: prefix ::= name | functinon_call. Simplified to
