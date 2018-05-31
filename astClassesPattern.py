@@ -250,10 +250,13 @@ vhdl = {
         { "astType" : "Choice", "wrpType" : ["std::vector"],
           "name" : "choices" },
     ]},
-    # IEEE 1076.6-2004
+    # IEEE 1076.6-2004 p.94
     # choice ::= simple_expression | discrete_range | simple_name | others
-    # We simplify to choice ::= expression | range | others
+    # We simplify to choice ::= expression | range
     # simple_expression produces everything in expression including simple_name
+    # Maybe surprisingly, the keyword OTHERS is
+    # also included as child of Expression
+    # (THIS IS A SIMPLIFICATION, THE ACUTAL PARSER HAS TO UNDERSTAND!)
     "Choice" : { "parent" : "AstNode", "members" : [] },
     "ChoiceExpression" : { "parent" : "Choice", "members" : [
         { "astType" : "Expression", "name" : "expression" }
@@ -261,7 +264,7 @@ vhdl = {
     "ChoiceRange" : { "parent" : "Choice", "members" : [
         { "astType" : "Range", "name" : "range" }
     ] },
-    "ChoiceOthers" : { "parent" : "AstNode", "members" : [] },
+    "ChoiceOthers" : { "parent" : "Choice", "members" : [] },
     # Literals roughly as defined in IEEE 1076.6-2004 p 73
     "RealLiteral" : {
         "parent" : "Expression",
@@ -276,6 +279,19 @@ vhdl = {
         { "astType" : "std::string", "name" : "baseSpecifier", "allowedValues" : ["B", "O", "X"] },
         { "astType" : "std::string", "name" : "value"},
     ]},
+
+    ## This simplification is used in order to make the abstract representation
+    ## of - association_list (specifically actual_designator)
+    ##    - TODO: List remaining
+    ## easier to represent (especially withouth all the indirections).
+    # Represents the "open" keyword
+    "OpenSpecification" : { "parent" : "Expression", "members" : []},
+    # Represents the "all" keyword
+    "AllSpecification" : { "parent" : "Expression", "members" : []},
+    # Represents the "others" keyword
+    "OthersSpecification" : { "parent" : "Expression", "members" : []},
+
+
     # Subsumes IEEE 1076.6-2004 'based_literal' and 'integer'
     "IntegerLiteral" : {
         "parent" : "Expression",
@@ -529,6 +545,50 @@ vhdl = {
     "PortMapAspect" : { "parent" : "AstNode", "members" : [
         ## TODO: AssociationList!
     ]},
+
+    ## Simplifications used for association_list (IEEE 1076.6-2004 p.65):
+    ## association_list ::= { association_element }
+    ## association_element ::= [formal_part =>] actual_part
+    ##   which we simplify to
+    ## association_element' ::= [name =>] expr
+    ## => formal_part was previously
+    ##    formal_part ::= formal_designator
+    ##                  | function_name ( formal_designator)
+    ##                  | type_mark ( formal_designator)
+    ##    formal_designator ::= name
+    ##    -- simplification steps
+    ##            Hence we can simplify formal_part to
+    ##    formal_part' ::= name | function_name (name) | type_mark (name)
+    ##            and because a function_name and a type_mark are
+    ##            just names themselves.
+    ##            we simplify further to
+    ##    formal_part'' ::= name | name (name)
+    ##            and using the fact that the rhs `name (name)`
+    ##            can be expressed by
+    ##            a simple indexd_name (IEEE 1076.6-2004 p.70) we finally conclude to
+    ##    formal_part''' ::= name
+    ##
+    ## => actual_part was
+    ##    actual_part ::= actual_designator
+    ##                  | function_name ( actual_designator )
+    ##                  | type_mark ( actual_designator )
+    ##    actual_designator ::= expression | name | open
+    ##            using function_name == name and type_mark == name
+    ##    actual_part' ::= actual_designator
+    ##                  | name ( actual_designator )
+    ##
+    ##            and using the fact that the actual_designator can
+    ##            be expressed as normal expression iff we make `open`
+    ##            itself an expression (which we'll do).
+    ##    actual_part' ::= expression
+    ##                  | name ( expression )
+    ##            which is the same as
+    ##    actual_part' ::= expression
+    ##            since name (expression) already is an indexed_expression and thus
+    ##            can be reduced to expression.
+    ##
+    ##
+
 
     # p.104: prefix ::= name | functinon_call. Simplified to
     # prefix ::= name | expression
