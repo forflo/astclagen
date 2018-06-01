@@ -597,6 +597,9 @@ vhdl = {
         { "astType" : "Expression", "name" : "actualExpression" }
     ]},
 
+
+    ## LEFTOFF@@
+
     # p.104: prefix ::= name | functinon_call. Simplified to
     # prefix ::= name | expression
     "Prefix" : {"parent" : "AstNode", "members" : []},
